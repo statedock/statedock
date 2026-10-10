@@ -1,0 +1,29 @@
+{
+  "name": "statedock",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm build && pnpm -r typecheck",
+    "test": "pnpm build && node --import ./scripts/register-cloudflare.mjs --import tsx --test apps/web/src/*.test.ts apps/online/test/*.test.ts packages/core/dist/*.test.js apps/api/dist/*.test.js apps/mcp/dist/*.test.js",
+    "dev": "pnpm build && pnpm --filter @statedock/api dev",
+    "mcp": "node apps/mcp/dist/index.js",
+    "web": "pnpm --filter @statedock/web dev",
+    "deploy:online": "pnpm --filter @statedock/core build && pnpm --filter @statedock/web build && pnpm --filter @statedock/online run deploy:prod",
+    "format": "prettier --write \"{apps,packages}/**/src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"{apps,packages}/**/src/**/*.{ts,tsx,css}\"",
+    "lint": "node scripts/check-boundaries.mjs",
+    "selfhost:dev": "pnpm --filter @statedock/core build && pnpm --filter @statedock/web build && pnpm --filter @statedock/online dev",
+    "selfhost:check": "node scripts/check-release.mjs",
+    "deploy:dry-run": "pnpm --filter @statedock/core build && pnpm --filter @statedock/web build && pnpm --filter @statedock/online run deploy:dry-run",
+    "test:release": "node --test scripts/check-release.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "prettier": "3.6.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  },
+  "license": "AGPL-3.0-only"
+}

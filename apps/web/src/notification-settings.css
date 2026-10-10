@@ -1,0 +1,186 @@
+/* Notification settings: persistent channel rail and independent panels. */
+.notification-settings-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: calc(100vw - 32px);
+  max-width: 820px;
+  height: min(700px, 86dvh);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.notification-settings-header {
+  flex: none;
+  text-align: left;
+  padding: 22px 48px 20px 24px;
+  border-bottom: 1px solid hsl(var(--border));
+  gap: 6px;
+}
+.notification-settings-header > p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.notification-settings-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.notification-channel-nav {
+  width: 164px;
+  flex: none;
+  padding: 16px 10px;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.notification-channel-tab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  min-height: 62px;
+  padding: 11px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  cursor: pointer;
+}
+.notification-channel-tab:hover {
+  background: hsl(var(--background));
+}
+.notification-channel-tab[aria-selected="true"] {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+  box-shadow: 0 1px 3px #00000008;
+}
+.notification-channel-tab:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+.notification-channel-status {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: hsl(var(--muted-foreground));
+}
+.notification-channel-status.is-configured {
+  color: #15803d;
+  background: #dcfce7;
+}
+.notification-channel-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+}
+.notification-channel-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.notification-channel-label strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.notification-channel-label small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.notification-channel-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  padding: 10px;
+  margin-top: auto;
+}
+.notification-channel-legend svg {
+  color: #15803d;
+}
+.notification-channel-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  scrollbar-gutter: stable;
+}
+.notification-channel-panel[hidden] {
+  display: none;
+}
+.notification-channel-panel input:not([type="checkbox"]),
+.notification-channel-panel select {
+  min-height: 42px;
+}
+.notification-channel-panel label:has(input[type="checkbox"]) {
+  min-height: 32px;
+}
+@media (max-width: 640px) {
+  .notification-settings-dialog {
+    width: calc(100vw - 16px);
+    height: calc(92dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: none;
+    border-radius: 13px;
+  }
+  .notification-settings-header {
+    padding: 18px 40px 15px 14px;
+  }
+  .notification-settings-header > p {
+    font-size: 11px;
+  }
+  .notification-channel-nav {
+    width: 98px;
+    padding: 10px 5px;
+  }
+  .notification-channel-tab {
+    gap: 5px;
+    padding: 10px 5px;
+    min-height: 66px;
+    border-radius: 8px;
+  }
+  .notification-channel-status {
+    width: 16px;
+    height: 16px;
+  }
+  .notification-channel-label strong {
+    font-size: 11px;
+  }
+  .notification-channel-label small {
+    font-size: 10px;
+  }
+  .notification-channel-legend {
+    padding: 6px 3px;
+    font-size: 9px;
+  }
+  .notification-channel-panel {
+    padding: 16px 12px;
+    scrollbar-gutter: auto;
+  }
+  .notification-channel-panel button {
+    white-space: normal;
+    height: auto;
+    min-height: 40px;
+    padding: 9px 10px;
+  }
+  .notification-channel-panel input:not([type="checkbox"]),
+  .notification-channel-panel select {
+    font-size: 16px;
+  }
+  .notification-channel-panel input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+}

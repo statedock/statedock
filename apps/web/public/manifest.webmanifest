@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "StateDock — Project State for Coding Agents",
+  "short_name": "StateDock",
+  "description": "What was done, what is in progress, and why key decisions were made.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "categories": ["productivity", "developer"],
+  "icons": [
+    { "src": "/icons/statedock-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/statedock-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/statedock-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/statedock.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

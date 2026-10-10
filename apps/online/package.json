@@ -1,0 +1,25 @@
+{
+  "name": "@statedock/online",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "wrangler types && tsc --noEmit -p tsconfig.json",
+    "deploy:dry-run": "node scripts/stage-skill.mjs && wrangler deploy --dry-run",
+    "deploy:prod": "node scripts/check-deploy-config.mjs && node scripts/stage-skill.mjs && wrangler deploy --config wrangler.deploy.jsonc",
+    "d1:migrations:list": "wrangler d1 migrations list statedock-selfhost --local"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "1.2.3",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@statedock/core": "workspace:*",
+    "hono": "^4.13.13",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "wrangler": "4.118.0"
+  },
+  "license": "AGPL-3.0-only"
+}

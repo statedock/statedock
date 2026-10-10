@@ -1,0 +1,10 @@
+# Copy to .dev.vars for isolated local development; never commit real values.
+SESSION_SECRET=REPLACE_WITH_RANDOM_TEST_SECRET
+OWNER_EMAIL=owner@example.com
+# Optional: omit Resend when using the native Cloudflare EMAIL binding.
+RESEND_API_KEY=REPLACE_WITH_YOUR_TEST_EMAIL_PROVIDER_KEY
+# Optional provider credentials: uncomment only the integrations you configure.
+# TELEGRAM_BOT_TOKEN=REPLACE_WITH_YOUR_TEST_BOT_TOKEN
+# DISCORD_PUBLIC_KEY=REPLACE_WITH_YOUR_DISCORD_PUBLIC_KEY
+# DISCORD_APPLICATION_ID=REPLACE_WITH_YOUR_DISCORD_APPLICATION_ID
+# Sender and public origin are configured in your Wrangler config.

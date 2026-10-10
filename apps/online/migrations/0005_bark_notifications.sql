@@ -1,0 +1,6 @@
+CREATE TABLE bark_subscribers (
+ user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ device_key TEXT NOT NULL,
+ enabled INTEGER NOT NULL DEFAULT 1,
+ updated_at TEXT NOT NULL
+);

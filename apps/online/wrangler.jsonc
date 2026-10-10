@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "statedock-selfhost",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-06",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "observability": {"enabled": true, "traces": {"enabled": true}},
+  "assets": {"directory": "../web/dist", "binding": "ASSETS", "run_worker_first": true, "not_found_handling": "single-page-application"},
+  "d1_databases": [{"binding": "DB", "database_name": "statedock-selfhost", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations"}],
+  "kv_namespaces": [{"binding": "OAUTH_KV", "id": "00000000000000000000000000000000"}],
+  "r2_buckets": [{"binding": "ATTACHMENTS", "bucket_name": "statedock-selfhost-attachments"}],
+  "vars": {"APP_ENV": "selfhost", "PUBLIC_BASE_URL": "http://localhost:8787", "EMAIL_FROM": "noreply@example.com"}
+}

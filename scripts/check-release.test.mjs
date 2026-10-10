@@ -1,0 +1,49 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { checkRelease } from "./check-release.mjs";
+
+test("release scan ignores private local files but rejects force-tracked config and data", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    await writeFile(path.join(root, ".gitignore"), ".dev.vars\nwrangler.deploy.jsonc\nbackups/\n");
+    await writeFile(path.join(root, ".dev.vars"), "PRIVATE_TEST_VALUE=not-a-real-secret");
+    await writeFile(path.join(root, ".dev.vars.example"), "OWNER_EMAIL=owner@example.com");
+    await writeFile(path.join(root, "wrangler.deploy.jsonc"), "{}");
+    await mkdir(path.join(root, "backups"));
+    await writeFile(path.join(root, "backups", "database.sql"), "SELECT 1;");
+    assert.deepEqual(await checkRelease(root), []);
+    execFileSync(
+      "git",
+      ["add", "-f", ".dev.vars", "wrangler.deploy.jsonc", "backups/database.sql"],
+      { cwd: root },
+    );
+    const failures = await checkRelease(root);
+    assert.equal(failures.filter((f) => f.includes("personal configuration")).length, 3);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("release scan detects operator examples, emails, machine paths and credentials without printing values", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const operator = "https://" + "test." + "statedock" + ".dev";
+    const personal = "person@" + "mailbox" + ".com";
+    const secret = "sdm_" + "a".repeat(64);
+    await writeFile(
+      path.join(root, "bad.md"),
+      `${operator}\n${personal}\n${secret}\n${"/Users/" + "someone/project"}`,
+    );
+    const failures = await checkRelease(root);
+    assert.equal(failures.length, 4);
+    assert.ok(failures.every((f) => !f.includes(secret) && !f.includes(personal)));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

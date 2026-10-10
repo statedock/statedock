@@ -1,0 +1,22 @@
+node_modules/
+dist/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+
+# Local data, tool caches, and credentials
+.DS_Store
+.pnpm-store/
+.wrangler/
+*.db
+*.db-shm
+*.db-wal
+.env.*
+.dev.vars*
+
+!**/.dev.vars.example
+wrangler.deploy.jsonc
+backups/
+
+worker-configuration.d.ts

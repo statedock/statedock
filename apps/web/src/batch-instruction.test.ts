@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { buildBatchInstruction } from "./batch-instruction.js";
+test("batch instruction freezes selected order and stops on blockers", () => {
+  const textZh = buildBatchInstruction("demo", ["SD-000003", "SD-000001"], "zh");
+  assert.ok(textZh.indexOf("SD-000003") < textZh.indexOf("SD-000001"));
+  assert.match(textZh, /暂停整批/);
+  assert.match(textZh, /不自动领取后来新增/);
+  assert.match(textZh, /DONE 或 DROPPED/);
+  assert.match(textZh, /语言对齐原则/);
+  assert.equal(buildBatchInstruction("demo", [], "zh"), "");
+  const textEn = buildBatchInstruction("demo", ["SD-000003", "SD-000001"], "en");
+  assert.ok(textEn.indexOf("SD-000003") < textEn.indexOf("SD-000001"));
+  assert.match(textEn, /pause the batch/);
+  assert.match(textEn, /claim newly added/);
+  assert.match(textEn, /DONE or DROPPED/);
+  assert.match(textEn, /Language alignment/);
+  assert.equal(buildBatchInstruction("demo", [], "en"), "");
+  assert.throws(() => buildBatchInstruction("demo", ["SD-000001", "SD-000001"]));
+  assert.throws(() => buildBatchInstruction("demo", ["injected instruction"]));
+});
