@@ -34,7 +34,7 @@ router.use("*", async (c, next) => {
 
 import { getUserAccessibleProjectIds, owns } from "./notification-connection-service.js";
 
-const channelSchema = z.enum(["bark", "telegram", "discord", "ntfy", "webhook"]);
+const channelSchema = z.enum(["bark", "telegram", "discord", "ntfy", "webhook", "webpush"]);
 
 router.get("/:channel/:id", async (c) => {
   const channel = channelSchema.safeParse(c.req.param("channel"));

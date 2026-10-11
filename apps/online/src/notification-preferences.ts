@@ -1,7 +1,7 @@
 import { formatTaskId, formatTaskLabel } from "@statedock/core";
 import type { OnlineEnv } from "./auth.js";
 export { formatTaskId, formatTaskLabel };
-export type Channel = "bark" | "telegram" | "discord" | "ntfy" | "webhook";
+export type Channel = "bark" | "telegram" | "discord" | "ntfy" | "webhook" | "webpush";
 export type NotificationKind = "created" | "started" | "completed" | "waiting" | "dropped";
 export interface NotificationEvent {
   appOrigin?: string;

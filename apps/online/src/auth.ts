@@ -18,6 +18,9 @@ export interface OnlineEnv {
   APP_ENV: string;
   EMAIL_FROM?: string;
   SESSION_SECRET: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
   OWNER_EMAIL?: string;
   RESEND_API_KEY?: string;
   TELEGRAM_BOT_TOKEN?: string;

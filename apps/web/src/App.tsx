@@ -1,5 +1,6 @@
 import { StateDockLogo } from "@/components/layout/StateDockLogo";
 import { useEffect, useState } from "react";
+import { clearPushOnSignOut } from "./web-push-client";
 import { api } from "./api";
 import { DocPage } from "./DocPage";
 import { I18nProvider, useI18n } from "./i18n/context";
@@ -104,6 +105,7 @@ function SessionApp() {
 
   async function signOut() {
     await api("/auth/logout", "POST");
+    await clearPushOnSignOut().catch(() => {});
     setUser(null);
   }
 

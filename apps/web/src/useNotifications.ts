@@ -1,7 +1,7 @@
 import type { PlanEvent, PlanEventPage } from "@statedock/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import { freshEvents, notificationText } from "./notification-events";
+import { freshEvents } from "./notification-events";
 
 const supported = () => typeof Notification !== "undefined" && window.isSecureContext;
 
@@ -9,6 +9,8 @@ export function useNotifications(
   open: (event: PlanEvent) => void,
   lang: "en" | "zh" = "en",
   userId = "local",
+  /** Increments when synced data changed; triggers a check for new events without polling. */
+  changeSignal = 0,
 ) {
   const scope = `${window.location.origin}:${userId}`;
   const enabledKey = `statedock.notifications.${scope}.enabled`;
@@ -28,6 +30,7 @@ export function useNotifications(
   const [problem, setProblem] = useState("");
   const openRef = useRef(open);
   openRef.current = open;
+  const pollRef = useRef<(() => Promise<void>) | null>(null);
 
   const setInAppToastsEnabled = useCallback(
     (value: boolean) => {
@@ -53,11 +56,20 @@ export function useNotifications(
         openRef.current(e.data.data);
       }
     };
+    const syncAccount = () => {
+      void navigator.serviceWorker
+        .getRegistration()
+        .then((r) => r?.active?.postMessage({ type: "PUSH_ACCOUNT", userId }))
+        .catch(() => {});
+    };
+    syncAccount();
+    navigator.serviceWorker.addEventListener("controllerchange", syncAccount);
     navigator.serviceWorker.addEventListener("message", handleSwMessage);
     return () => {
       navigator.serviceWorker.removeEventListener("message", handleSwMessage);
+      navigator.serviceWorker.removeEventListener("controllerchange", syncAccount);
     };
-  }, []);
+  }, [userId]);
 
   const emit = useCallback(
     async (event: PlanEvent) => {
@@ -65,51 +77,8 @@ export function useNotifications(
         setToasts((items) => [...items, event].slice(-5));
       }
 
-      if (supported() && Notification.permission === "granted") {
-        const text = notificationText(event, lang);
-        const options: NotificationOptions = {
-          body: text.body,
-          icon: "/icons/statedock-192.png",
-          badge: "/icons/favicon-32x32.png",
-          tag: `statedock-event-${event.sequence}`,
-          data: event,
-        };
-
-        let shown = false;
-
-        // 1. Prioritize Service Worker registration.showNotification (standard PWA OS push)
-        if ("serviceWorker" in navigator) {
-          try {
-            const registration = await navigator.serviceWorker.ready;
-            if (registration && typeof registration.showNotification === "function") {
-              await registration.showNotification(text.title, options);
-              shown = true;
-              setProblem("");
-            }
-          } catch {
-            // Fall through to window Notification
-          }
-        }
-
-        // 2. Fallback to standard window Notification
-        if (!shown) {
-          try {
-            const notification = new Notification(text.title, options);
-            notification.onclick = () => {
-              window.focus();
-              openRef.current(event);
-              notification.close();
-            };
-            setProblem("");
-          } catch {
-            setProblem(
-              lang === "zh"
-                ? "浏览器无法直接显示系统通知，已保留页面提示。请检查系统设置中的通知权限。"
-                : "Browser notifications could not be displayed directly. In-app alerts remain active. Please check system notification settings.",
-            );
-          }
-        }
-      }
+      // OS notifications are delivered exclusively by the Service Worker's push handler.
+      // A polled event must never display the same system alert a second time.
     },
     [lang],
   );
@@ -177,8 +146,8 @@ export function useNotifications(
       }
     }
 
+    pollRef.current = poll;
     void poll();
-    const timer = setInterval(() => void poll(), 5000);
     const onStorage = (event: StorageEvent) => {
       if (event.key === enabledKey) setEnabled(event.newValue === "true");
       if (event.key === inAppToastsKey) setInAppToastsEnabledState(event.newValue !== "false");
@@ -189,11 +158,17 @@ export function useNotifications(
     window.addEventListener("focus", onFocus);
     return () => {
       stopped = true;
-      clearInterval(timer);
+      pollRef.current = null;
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);
     };
   }, [enabled, emit, lang, scope, cursorKey, enabledKey, inAppToastsKey]);
+
+  // New events always accompany a project revision change, so the shared sync poller
+  // wakes this check; there is no separate timer.
+  useEffect(() => {
+    if (changeSignal > 0) void pollRef.current?.();
+  }, [changeSignal]);
 
   async function toggle() {
     if (enabled) {
@@ -203,15 +178,10 @@ export function useNotifications(
       return;
     }
 
-    const permissionPromise =
-      supported() && Notification.permission === "default"
-        ? Notification.requestPermission()
-        : Promise.resolve(supported() ? Notification.permission : ("unsupported" as const));
-
     try {
       const [page, value] = await Promise.all([
         api<PlanEventPage>("/plan-events"),
-        permissionPromise,
+        Promise.resolve(supported() ? Notification.permission : ("unsupported" as const)),
       ]);
       localStorage.setItem(cursorKey, String(page.cursor));
       setPermission(value);

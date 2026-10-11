@@ -23,8 +23,9 @@ export function useNotificationCenter({
   const n = t.app.notifications;
   const isZh = lang === "zh";
 
+  const [pushDeviceCount, setPushDeviceCount] = useState(0);
   const [projects, setProjects] = useState<Project[]>(propProjects || []);
-  const [activeChannel, setActiveChannel] = useState<ChannelType>("bark");
+  const [activeChannel, setActiveChannel] = useState<ChannelType>("webpush");
   const [selectedItemId, setSelectedItemId] = useState<string | "new" | null>(null);
   const [mobileStep, setMobileStep] = useState<"channels" | "list" | "detail">("channels");
 
@@ -116,6 +117,8 @@ export function useNotificationCenter({
   // Get current endpoint list for Column 2
   const currentEndpoints: BaseEndpoint[] = (() => {
     switch (activeChannel) {
+      case "webpush":
+        return [];
       case "bark":
         return barkItems.map((b) => ({
           id: b.id,
@@ -194,6 +197,13 @@ export function useNotificationCenter({
     icon: typeof Smartphone;
     count: number;
   }[] = [
+    {
+      id: "webpush",
+      label: isZh ? "PWA 后台通知" : "Web Push",
+      desc: isZh ? "内置 · 多设备" : "Built-in · Multiple devices",
+      icon: Bell,
+      count: pushDeviceCount,
+    },
     {
       id: "bark",
       label: "Bark",
@@ -393,6 +403,7 @@ export function useNotificationCenter({
   const selectedItem = currentEndpoints.find((e) => e.id === selectedItemId);
 
   return {
+    setPushDeviceCount,
     propProjects,
     inAppToastsEnabled,
     onInAppToastsChange,

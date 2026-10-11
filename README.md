@@ -40,3 +40,5 @@ pnpm test:release
 StateDock is licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE). Third-party packages retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The license does not grant rights to StateDock trademarks or imply official endorsement of third-party instances.
 
 Deployment depends on your Cloudflare resources, email delivery and external client configuration. See the validation guide for checks to run on your own instance.
+
+Built-in Web Push delivers task notifications to enabled mobile and desktop devices while the PWA is closed. Configure persistent VAPID secrets once; see [Web Push setup](docs/self-hosting.md#built-in-web-push). Existing external notification channels remain optional.

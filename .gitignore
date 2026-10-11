@@ -20,3 +20,6 @@ wrangler.deploy.jsonc
 backups/
 
 worker-configuration.d.ts
+
+# Persistent per-instance Web Push keys
+**/.vapid*.json

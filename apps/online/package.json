@@ -11,6 +11,7 @@
     "d1:migrations:list": "wrangler d1 migrations list statedock-selfhost --local"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
     "@cloudflare/workers-oauth-provider": "1.2.3",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@statedock/core": "workspace:*",

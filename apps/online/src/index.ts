@@ -4,6 +4,7 @@ import type { OnlineEnv } from "./auth.js";
 import adminRoutes from "./instance-admin-routes.js";
 import collaboratorRoutes from "./collaborator-routes.js";
 import connectionRoutes from "./connection-routes.js";
+import webPushRoutes from "./web-push-routes.js";
 import gatewayRoutes from "./gateway-routes.js";
 import importRoutes from "./import-routes.js";
 import { instanceConfig } from "./instance-config.js";
@@ -65,6 +66,7 @@ app.route("/", integrationRoutes);
 app.route("/", importRoutes);
 app.route("/", collaboratorRoutes);
 // Authenticated API fallback must follow all concrete endpoints.
+app.route("/", webPushRoutes);
 app.route("/", gatewayRoutes);
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 

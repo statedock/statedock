@@ -93,6 +93,25 @@ Generate an Agent Access Token from **Connect Agent**, or connect using OAuth. [
 
 ## 6. Notifications
 
+### Built-in Web Push
+
+Generate a separate VAPID key pair once for this instance, from the repository root:
+
+```sh
+node scripts/generate-vapid.mjs --output .vapid.json --subject mailto:admin@example.com
+pnpm --filter @statedock/online exec wrangler secret bulk ../../.vapid.json --config wrangler.deploy.jsonc
+```
+
+Use your own contact email. The generator creates a protected, Git-ignored file and refuses to overwrite an existing file. Keep a secure backup of this file, together with your other instance secrets. Reuse the same keys across upgrades and server restarts; replacing them requires reconnecting devices. The three values are `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`. For local development, put these values in the ignored `.dev.vars` file instead of uploading production secrets.
+
+Deploy the updated Worker and apply migration 0023. In **Notification Center → Web Push**, name and enable each device separately, then allow notifications when asked. iPhone/iPad requires iOS/iPadOS 16.4+ and adding the PWA to the Home Screen before enabling. Android and desktop use a compatible browser. The app requires HTTPS (localhost is only for development).
+
+Each device has independent project scopes, event preferences, pause/remove controls, and a test button. Task completion and requests for your input are enabled by default. Push is sent by the Worker when task events are recorded, with a durable per-device retry queue; it does not depend on an open page or browser polling. Event IDs are retained locally to deduplicate retried system notifications. Foreground event fetching displays only in-app toasts. Clearing browser storage also clears its local deduplication receipts.
+
+Subscriptions remain tied to the browser login session. Signing out unsubscribes the current device; expired/revoked sessions and disabled accounts stop new deliveries. Sign in again and use **Update this device** to reconnect a retained inactive device. Operators do not need a StateDock account, license, or relay: the Worker sends encrypted messages directly to browser vendors' push services. These services must still be reachable. A notification can arrive while you are away from your LAN even when clicking it cannot reach the private server; use a reachable HTTPS origin or VPN.
+
+### Optional external channels
+
 - Bark / ntfy: configure your own device key or topic in the notification center.
 - Outgoing Webhook: configure your endpoint and optional signing secret there.
 - Discord channel notifications: configure your webhook in the notification center. For slash commands, configure your own Discord application, `DISCORD_PUBLIC_KEY` and `DISCORD_APPLICATION_ID`, and point its interactions URL to `/api/discord/interactions`.

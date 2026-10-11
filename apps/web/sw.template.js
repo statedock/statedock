@@ -1,31 +1,31 @@
 const CACHE_NAME = "statedock-shell-__BUILD_ID__";
 const PRECACHE_URLS = __PRECACHE_URLS__;
 
-self.addEventListener("install", event => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting()),
   );
 });
 
-self.addEventListener("activate", event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then(keys =>
+      .then((keys) =>
         Promise.all(
           keys
-            .filter(key => key.startsWith("statedock-shell-") && key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-        )
+            .filter((key) => key.startsWith("statedock-shell-") && key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
       )
-      .then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   );
 });
 
-self.addEventListener("fetch", event => {
+self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
@@ -51,28 +51,32 @@ self.addEventListener("fetch", event => {
   ) {
     event.respondWith(
       caches.match(request).then(
-        cached =>
+        (cached) =>
           cached ||
-          fetch(request).then(response => {
+          fetch(request).then((response) => {
             if (response.ok)
-              caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone()));
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
             return response;
-          })
-      )
+          }),
+      ),
     );
   }
 });
 
+__PUSH_HANDLERS__;
+
 // OS Notification click handler: focus or open the StateDock window
-self.addEventListener("notificationclick", event => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data;
-  const targetUrl = data?.projectId ? `/?project=${encodeURIComponent(data.projectId)}&task=${encodeURIComponent(data.reference)}` : "/";
+  const targetUrl = data?.projectId
+    ? `/?project=${encodeURIComponent(data.projectId)}&task=${encodeURIComponent(data.reference)}`
+    : "/";
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ("focus" in client) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
           client.postMessage({ type: "NAVIGATE_TO_PLAN", data });
           return client.focus();
         }
@@ -80,6 +84,6 @@ self.addEventListener("notificationclick", event => {
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
-    })
+    }),
   );
 });

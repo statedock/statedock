@@ -1,4 +1,11 @@
-export type ChannelType = "bark" | "discord" | "telegram" | "ntfy" | "webhook" | "in-app";
+export type ChannelType =
+  | "bark"
+  | "discord"
+  | "telegram"
+  | "ntfy"
+  | "webhook"
+  | "webpush"
+  | "in-app";
 
 export interface BaseEndpoint {
   id: string;

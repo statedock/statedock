@@ -10,7 +10,11 @@ test("release scan ignores private local files but rejects force-tracked config 
   const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
   try {
     execFileSync("git", ["init", "-q"], { cwd: root });
-    await writeFile(path.join(root, ".gitignore"), ".dev.vars\nwrangler.deploy.jsonc\nbackups/\n");
+    await writeFile(
+      path.join(root, ".gitignore"),
+      ".dev.vars\n.vapid.json\nwrangler.deploy.jsonc\nbackups/\n",
+    );
+    await writeFile(path.join(root, ".vapid.json"), "{}");
     await writeFile(path.join(root, ".dev.vars"), "PRIVATE_TEST_VALUE=not-a-real-secret");
     await writeFile(path.join(root, ".dev.vars.example"), "OWNER_EMAIL=owner@example.com");
     await writeFile(path.join(root, "wrangler.deploy.jsonc"), "{}");
@@ -19,11 +23,11 @@ test("release scan ignores private local files but rejects force-tracked config 
     assert.deepEqual(await checkRelease(root), []);
     execFileSync(
       "git",
-      ["add", "-f", ".dev.vars", "wrangler.deploy.jsonc", "backups/database.sql"],
+      ["add", "-f", ".dev.vars", ".vapid.json", "wrangler.deploy.jsonc", "backups/database.sql"],
       { cwd: root },
     );
     const failures = await checkRelease(root);
-    assert.equal(failures.filter((f) => f.includes("personal configuration")).length, 3);
+    assert.equal(failures.filter((f) => f.includes("personal configuration")).length, 4);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

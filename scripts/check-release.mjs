@@ -43,6 +43,7 @@ export async function checkRelease(root) {
     const example = name === ".dev.vars.example" || name === ".env.example";
     if (
       name === "wrangler.deploy.jsonc" ||
+      name.startsWith(".vapid") ||
       (!example && (name.startsWith(".dev.vars") || name === ".env" || name.startsWith(".env."))) ||
       parts.some((p) => ["backups", ".wrangler", "node_modules", "dist"].includes(p)) ||
       /\.(?:sqlite|db)(?:-(?:shm|wal))?$/.test(name) ||

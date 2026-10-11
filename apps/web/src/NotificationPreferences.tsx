@@ -17,7 +17,7 @@ export function NotificationPreferences({
   projects: initialProjects,
   onSaved,
 }: {
-  channel: "bark" | "telegram" | "discord" | "ntfy" | "webhook";
+  channel: "bark" | "telegram" | "discord" | "ntfy" | "webhook" | "webpush";
   id: string;
   projects?: Project[];
   onSaved?: (projectIds: string[] | null) => void;

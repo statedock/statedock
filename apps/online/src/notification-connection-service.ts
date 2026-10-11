@@ -2,6 +2,7 @@ import type { OnlineEnv } from "./auth.js";
 import type { Channel } from "./notification-preferences.js";
 export async function owns(env: OnlineEnv, userId: string, channel: Channel, id: string) {
   const tables = {
+    webpush: "web_push_subscriptions",
     bark: "bark_subscribers",
     ntfy: "ntfy_subscribers",
     telegram: "telegram_subscribers",

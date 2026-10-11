@@ -1,3 +1,4 @@
+import { WebPushPanel } from "./WebPushPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@statedock/core";
@@ -102,13 +103,13 @@ export function NotificationCenter({
               variant="outline"
               className="text-[10px] font-mono uppercase text-muted-foreground"
             >
-              {isZh ? "三栏控制台" : "3-Column Console"}
+              {isZh ? "设备与渠道" : "Devices & Channels"}
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {isZh
-              ? "多渠道出站通知管理：左侧选择渠道、中间查看配置端点、右侧细化项目关联与事件偏好。"
-              : "Multi-channel notification management: select channel on the left, inspect endpoints in the middle, refine project associations on the right."}
+              ? "管理设备后台通知与外部渠道，选择接收提醒的项目和任务事件。"
+              : "Manage device notifications and external channels. Choose the projects and task events you want to hear about."}
           </p>
         </div>
 
@@ -156,12 +157,28 @@ export function NotificationCenter({
         {/* ============================================================ */}
         {/* COLUMN 2: Endpoints / Configurations List (lg:col-span-4)   */}
         {/* ============================================================ */}
-        <NotificationEndpointList model={model} />
+        {activeChannel === "webpush" ? (
+          <div
+            className={`lg:col-span-9 min-w-0 ${mobileStep === "channels" ? "hidden lg:block" : ""}`}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden mb-2"
+              onClick={() => setMobileStep("channels")}
+            >
+              {isZh ? "返回通知渠道" : "Back to channels"}
+            </Button>
+            <WebPushPanel projects={projects} onCount={model.setPushDeviceCount} />
+          </div>
+        ) : (
+          <NotificationEndpointList model={model} />
+        )}
 
         {/* ============================================================ */}
         {/* COLUMN 3: Details & Preferences Panel (lg:col-span-5)        */}
         {/* ============================================================ */}
-        <NotificationEndpointDetails model={model} />
+        {activeChannel !== "webpush" && <NotificationEndpointDetails model={model} />}
       </div>
     </div>
   );
