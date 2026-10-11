@@ -3,7 +3,7 @@ import { z } from "zod";
 import { currentSession, digest, type OnlineEnv } from "./auth.js";
 import { sameOrigin } from "./http.js";
 import { webPushConfig, validPushEndpoint, validPushKeys } from "./web-push-config.js";
-import { sendWebPush, type PushDevice } from "./web-push-sender.js";
+import { sendWebPush, WebPushDeliveryError, type PushDevice } from "./web-push-sender.js";
 const router = new Hono<{
   Bindings: OnlineEnv;
   Variables: { userId: string; sessionId: string };
@@ -154,8 +154,11 @@ router.post("/api/auth/web-push/:id/test", async (c) => {
       return c.json({ error: "push_subscription_expired" }, 410);
     }
     return c.json({ data: { sent: true } });
-  } catch {
-    return c.json({ error: "push_delivery_failed" }, 502);
+  } catch (error) {
+    return c.json(
+      { error: error instanceof WebPushDeliveryError ? error.code : "push_delivery_failed" },
+      502,
+    );
   }
 });
 export default router;

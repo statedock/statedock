@@ -1,3 +1,4 @@
+import { sendWebPush } from "../src/web-push-sender.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import pushRoutes from "../src/web-push-routes.js";
@@ -200,6 +201,43 @@ test("Old queued events expire without sending, and missing VAPID never sends", 
     }
   } finally {
     globalThis.fetch = original;
+    f.client.close();
+  }
+});
+
+test("Provider rejection is classified without exposing keys, endpoint or provider response", async () => {
+  const f = await pushFixture(),
+    original = globalThis.fetch,
+    warn = console.warn;
+  const logs: unknown[][] = [];
+  const sub = f.subscription("diagnostic").subscription;
+  console.warn = (...values) => {
+    logs.push(values);
+  };
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ reason: "BadJwtToken", privateDetail: "do-not-log-this" }), {
+      status: 403,
+    })) as typeof fetch;
+  try {
+    await assert.rejects(
+      sendWebPush(
+        f.env,
+        { ...sub.keys, endpoint: sub.endpoint, user_id: "one", language: "en" },
+        { eventId: "synthetic", userId: "one", title: "Synthetic", body: "Synthetic" },
+      ),
+      /push_auth_failed/,
+    );
+    const result = JSON.stringify(logs);
+    assert.match(result, /BadJwtToken/);
+    assert.match(result, /403/);
+    assert.ok(
+      !result.includes(sub.endpoint) &&
+        !result.includes(sub.keys.auth) &&
+        !result.includes("do-not-log-this"),
+    );
+  } finally {
+    globalThis.fetch = original;
+    console.warn = warn;
     f.client.close();
   }
 });

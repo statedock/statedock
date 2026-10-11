@@ -15,6 +15,22 @@ import {
 } from "./web-push-client";
 const errorText = (code: string, zh: boolean) => {
   const messages: Record<string, [string, string]> = {
+    push_auth_failed: [
+      "The push service rejected this server’s authentication. Please report this to the administrator.",
+      "推送服务拒绝了服务器身份验证，请反馈给管理员。",
+    ],
+    push_encryption_failed: [
+      "The server could not encrypt this notification. Please report this to the administrator.",
+      "服务器无法加密通知，请反馈给管理员。",
+    ],
+    push_provider_unreachable: [
+      "The server could not reach the push service. Please try again shortly.",
+      "服务器暂时无法连接推送服务，请稍后重试。",
+    ],
+    push_provider_rejected: [
+      "The push service rejected this notification. Please report this to the administrator.",
+      "推送服务拒绝了此通知，请反馈给管理员。",
+    ],
     push_permission_denied: [
       "Allow notifications in your browser or system settings, then try again.",
       "请在浏览器或系统设置中允许通知后重试。",

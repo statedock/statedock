@@ -50,27 +50,75 @@ export function pushNotice(
     body: `${formatTaskLabel(event).slice(0, 180)}${event.summary || event.reason ? "\n" + eventDescription(event) : ""}`,
   };
 }
+export class WebPushDeliveryError extends Error {
+  constructor(public readonly code: string) {
+    super(code);
+  }
+}
 export async function sendWebPush(env: OnlineEnv, device: PushDevice, notice: PushNotice) {
   const config = webPushConfig(env);
   if (!config) throw new Error("web_push_not_configured");
   if (!validPushEndpoint(device.endpoint)) throw new Error("invalid_push_endpoint");
-  const payload = await buildPushPayload(
-    { data: { ...notice }, options: { ttl: 86400, urgency: "normal" } },
-    {
-      endpoint: device.endpoint,
-      expirationTime: null,
-      keys: { p256dh: device.p256dh, auth: device.auth },
-    },
-    config,
-  );
-  const response = await fetch(device.endpoint, {
-    ...payload,
-    redirect: "error",
-    signal: AbortSignal.timeout(10000),
-  });
-  // No endpoint, keys, payload, or provider response in logs.
+  let payload;
+  try {
+    payload = await buildPushPayload(
+      { data: { ...notice }, options: { ttl: 86400, urgency: "normal" } },
+      {
+        endpoint: device.endpoint,
+        expirationTime: null,
+        keys: { p256dh: device.p256dh, auth: device.auth },
+      },
+      config,
+    );
+  } catch (error) {
+    console.warn("Web Push encryption failed", {
+      type: error instanceof Error ? error.name : "unknown",
+    });
+    throw new WebPushDeliveryError("push_encryption_failed");
+  }
+  let response: Response;
+  try {
+    response = await fetch(device.endpoint, {
+      ...payload,
+      redirect: "error",
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    console.warn("Web Push provider connection failed");
+    throw new WebPushDeliveryError("push_provider_unreachable");
+  }
+  // Only reviewed provider reason codes are logged; never endpoints, keys or task payloads.
+  if (response.status === 404 || response.status === 410) {
+    await response.body?.cancel();
+    return "expired";
+  }
+  if (!response.ok) {
+    let reason = "unavailable";
+    const reviewed = new Set([
+      "BadJwtToken",
+      "BadVapidPublicKey",
+      "BadAuthorizationHeader",
+      "BadTtl",
+      "BadUrgency",
+      "BadTopic",
+      "BadPayload",
+      "PayloadTooLarge",
+      "Forbidden",
+      "TooManyRequests",
+    ]);
+    try {
+      const data = (await response.json()) as { reason?: string };
+      if (data.reason && reviewed.has(data.reason)) reason = data.reason;
+    } catch {
+      /* Non-JSON vendor errors contain no safe diagnostics. */
+    }
+    console.warn("Web Push provider rejected request", { status: response.status, reason });
+    throw new WebPushDeliveryError(
+      response.status === 401 || response.status === 403
+        ? "push_auth_failed"
+        : "push_provider_rejected",
+    );
+  }
   await response.body?.cancel();
-  if (response.status === 404 || response.status === 410) return "expired";
-  if (!response.ok) throw new Error("web_push_delivery_failed");
   return "sent";
 }
