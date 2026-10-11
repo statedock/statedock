@@ -88,7 +88,7 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
   } = model;
   return (
     <div
-      className={`space-y-2.5 ${selectedPlan ? "hidden lg:block lg:col-span-5" : "lg:col-span-12"}`}
+      className={`min-w-0 space-y-2.5 ${selectedPlan ? "hidden lg:block lg:col-span-5 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain" : "lg:col-span-12"}`}
     >
       {filteredPlans.length === 0 ? (
         <Card className="border-border/60 py-12 text-center shadow-sm">

@@ -92,8 +92,8 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
   } = model;
   if (!selectedPlan) return null;
   return (
-    <div className="lg:col-span-7">
-      <Card className="border-border/60 shadow-md sticky top-20">
+    <div className="min-w-0 lg:col-span-7 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
+      <Card className="border-border/60 shadow-md">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
