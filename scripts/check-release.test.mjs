@@ -47,3 +47,20 @@ test("release scan detects operator examples, emails, machine paths and credenti
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("release scan allows only the reviewed security contact in the security policy", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const contact = "support@" + "statedock" + ".dev";
+    await writeFile(path.join(root, "SECURITY.md"), `Contact: ${contact}`);
+    assert.deepEqual(await checkRelease(root), []);
+    await writeFile(path.join(root, "README.md"), contact);
+    assert.ok((await checkRelease(root)).some((f) => f.startsWith("README.md:")));
+    await writeFile(path.join(root, "README.md"), "Public documentation");
+    await writeFile(path.join(root, "SECURITY.md"), "personal@" + "mailbox.com");
+    assert.ok((await checkRelease(root)).some((f) => f.startsWith("SECURITY.md:")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

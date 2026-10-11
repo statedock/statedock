@@ -74,7 +74,11 @@ export async function checkRelease(root) {
       if (/(?:\/Volumes\/[^\s"']+|\/Users\/[^\s"']+|\/home\/(?!runner\/)[^\s"']+)/.test(source))
         failures.push(`${rel}: personal machine path detected`);
       for (const match of source.matchAll(/[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g)) {
-        if (!exampleDomain.test(match[1])) {
+        // The public security contact is reviewed; other real emails remain blocked.
+        if (
+          !(rel === "SECURITY.md" && match[0] === "support@statedock.dev") &&
+          !exampleDomain.test(match[1])
+        ) {
           failures.push(`${rel}: non-example email requires review`);
           break;
         }
