@@ -2,6 +2,7 @@ import type { GlobalPlanItem } from "@/components/dashboard/GlobalDashboard";
 import type { Activity, MarkdownFile, Plan, Project } from "@statedock/core";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "./api";
+import { createRefreshRunner, freshCached, startVisiblePolling } from "./workspace-sync";
 
 const base = (id: string) => `/projects/${encodeURIComponent(id)}`;
 
@@ -20,11 +21,23 @@ export function useWorkspaceData(
   const [globalLoading, setGlobalLoading] = useState(false);
 
   const request = useRef(0);
-  const planCache = useRef(new Map<string, { plans: Plan[]; at: number }>());
+  const planCache = useRef(new Map<string, { value: Plan[]; at: number }>());
+  const runRefresh = useRef(createRefreshRunner());
   const project = projects.find((p) => p.id === projectId);
 
-  async function refresh() {
-    const token = ++request.current;
+  function refresh(automatic = false): Promise<void> {
+    const generation = request.current;
+    return runRefresh.current(
+      `${generation}:${projectId}`,
+      async () => {
+        if (generation === request.current) await refreshData();
+      },
+      automatic,
+    );
+  }
+
+  async function refreshData() {
+    const token = request.current;
     setError("");
     try {
       const ps = await api<Project[]>("/projects");
@@ -39,16 +52,16 @@ export function useWorkspaceData(
       const currentPlans = api<Plan[]>(`${base(projectId)}/plans`);
       // Reuse selected-project data and briefly cache other projects.
       setGlobalLoading(true);
-      void Promise.allSettled(
+      const globalResults = Promise.allSettled(
         ps.map(async (p) => {
-          const cached = planCache.current.get(p.id);
+          const cached = freshCached(planCache.current.get(p.id), Date.now(), 30000);
           const list =
             p.id === projectId
               ? await currentPlans
-              : cached && Date.now() - cached.at < 30000
-                ? cached.plans
-                : await api<Plan[]>(`${base(p.id)}/plans`);
-          planCache.current.set(p.id, { plans: list, at: Date.now() });
+              : (cached ?? (await api<Plan[]>(`${base(p.id)}/plans`)));
+          // Only a successful network read updates freshness; cache hits do not.
+          if (token === request.current && (p.id === projectId || cached === undefined))
+            planCache.current.set(p.id, { value: list, at: Date.now() });
           return list.map((plan) => ({ plan, project: p }));
         }),
       ).then((results) => {
@@ -66,15 +79,23 @@ export function useWorkspaceData(
       });
 
       if (projectId) {
-        const [pl, fs, ac] = await Promise.all([
+        const currentData = Promise.allSettled([
           currentPlans,
           api<MarkdownFile[]>(`${base(projectId)}/files`),
           api<Activity[]>(`${base(projectId)}/activity?limit=100`),
         ]);
+        // Wait for every read even if one fails, keeping the next tick from overlapping.
+        await Promise.allSettled([currentData, globalResults]);
+        const results = await currentData;
         if (token !== request.current) return;
-        setPlans(pl);
-        setFiles(fs);
-        setActivity(ac);
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
+        const [pl, fs, ac] = results;
+        if (pl.status === "fulfilled" && fs.status === "fulfilled" && ac.status === "fulfilled") {
+          setPlans(pl.value);
+          setFiles(fs.value);
+          setActivity(ac.value);
+        }
       }
       setLoaded(true);
       setSynced(new Date());
@@ -87,14 +108,14 @@ export function useWorkspaceData(
   }
 
   useEffect(() => {
+    request.current++;
     localStorage.setItem("statedock.project", projectId);
     setPlans([]);
     setFiles([]);
     setActivity([]);
-    void refresh();
-    const timer = setInterval(() => void refresh(), 5000);
+    const stopPolling = startVisiblePolling(() => refresh(true));
     return () => {
-      clearInterval(timer);
+      stopPolling();
       request.current++;
     };
   }, [projectId]);

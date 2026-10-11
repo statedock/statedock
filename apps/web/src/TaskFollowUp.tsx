@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import type { FeedbackInput, Plan, ReviewInput, TaskEntry } from "@statedock/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
+import { createRefreshRunner, startVisiblePolling } from "./workspace-sync";
 import { useI18n } from "./i18n/context";
 
 export function TaskFollowUp({ plan }: { plan: Plan }) {
@@ -25,19 +26,45 @@ export function TaskFollowUp({ plan }: { plan: Plan }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function refresh() {
-    const [r, fb] = await Promise.all([
+  const runRefresh = useRef(createRefreshRunner());
+  const generation = useRef(0);
+
+  function refresh(automatic = false): Promise<void> {
+    const token = generation.current;
+    return runRefresh.current(
+      `${token}:${plan.reference}`,
+      async () => {
+        if (token === generation.current) await refreshData();
+      },
+      automatic,
+    );
+  }
+
+  async function refreshData() {
+    const token = generation.current;
+    const results = await Promise.allSettled([
       api<TaskEntry[]>(`/plans/${plan.reference}/reviews`),
       api<TaskEntry[]>(`/plans/${plan.reference}/feedback`),
     ]);
-    setReviews(r);
-    setFeedback(fb);
+    if (token !== generation.current) return;
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+    const [r, fb] = results;
+    if (r.status === "fulfilled" && fb.status === "fulfilled") {
+      setReviews(r.value);
+      setFeedback(fb.value);
+    }
   }
 
   useEffect(() => {
-    void refresh().catch((e) => setMessage(e.message));
-    const timer = setInterval(() => void refresh().catch(() => {}), 5000);
-    return () => clearInterval(timer);
+    generation.current++;
+    const stopPolling = startVisiblePolling(() =>
+      refresh(true).catch((e) => setMessage(e.message)),
+    );
+    return () => {
+      generation.current++;
+      stopPolling();
+    };
   }, [plan.reference]);
 
   async function submit(kind: "reviews" | "feedback", content: unknown) {
