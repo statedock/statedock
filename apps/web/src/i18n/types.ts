@@ -67,6 +67,7 @@ export interface Translations {
     };
     statuses: {
       PLAN: string;
+      READY: string;
       WORKING: string;
       WAITING: string;
       DONE: string;
@@ -193,6 +194,9 @@ export interface Translations {
       noInProgress: string;
       noInProgressHint: string;
       planned: string;
+      readyAgent: string;
+      noReady: string;
+      moreReady: (n: number) => string;
       plannedAgent: string;
       planAndExecute: string;
       noDiscussionBackground: string;
@@ -433,6 +437,15 @@ export interface Translations {
       badgeAllProjects: string;
       badgeProjectPrefix: string;
       badgeNoProjects: string;
+    };
+    readyExecution: {
+      title: string;
+      copy: string;
+      description: string;
+      preview: string;
+      copied: string;
+      copyFailed: string;
+      unavailable: string;
     };
     batch: {
       summaryTitle: (count: number) => string;

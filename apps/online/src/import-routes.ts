@@ -46,7 +46,7 @@ app.post("/api/auth/import-local", async (c) => {
             title: z.string().min(1).max(300),
             body: z.string().max(1_000_000),
             summary: z.string().max(1000).nullable().optional(),
-            status: z.enum(["PLAN", "WORKING", "WAITING", "DONE", "DROPPED"]),
+            status: z.enum(["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"]),
             created_at: dateString,
             updated_at: dateString,
           }),

@@ -9,7 +9,7 @@ export function BatchExecution({ project, plans }: { project: Project; plans: Pl
 
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
-  const available = plans.filter((p) => p.status === "PLAN");
+  const available = plans.filter((p) => p.status === "PLAN" || p.status === "READY");
   const order = selected.filter((ref) => available.some((p) => p.reference === ref));
   const instruction = buildBatchInstruction(project.slug, order, lang);
 

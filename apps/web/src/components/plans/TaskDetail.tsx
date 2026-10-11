@@ -9,16 +9,19 @@ import { AlertCircle, Check, FolderGit2, Play, RotateCcw, Sparkles, X } from "lu
 import { Attachments } from "../../Attachments";
 import { TaskFollowUp } from "../../TaskFollowUp";
 
-const states: PlanStatus[] = ["WORKING", "PLAN", "WAITING", "DONE", "DROPPED"];
+const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
 
-const statusBadgeVariant: Record<PlanStatus, "plan" | "working" | "waiting" | "done" | "dropped"> =
-  {
-    PLAN: "plan",
-    WORKING: "working",
-    WAITING: "waiting",
-    DONE: "done",
-    DROPPED: "dropped",
-  };
+const statusBadgeVariant: Record<
+  PlanStatus,
+  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
+> = {
+  PLAN: "plan",
+  READY: "ready",
+  WORKING: "working",
+  WAITING: "waiting",
+  DONE: "done",
+  DROPPED: "dropped",
+};
 
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
 
@@ -370,7 +373,7 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
           {/* Footer Actions */}
           <div className="flex items-center justify-between border-t border-border/40 pt-4">
             <div>
-              {selectedPlan.status === "PLAN" && (
+              {(selectedPlan.status === "PLAN" || selectedPlan.status === "READY") && (
                 <Button
                   variant="secondary"
                   size="sm"

@@ -266,7 +266,7 @@ export class StateDockService {
         }
       : null;
     const nextPendingTasks = plans
-      .filter((p) => p.status === "PLAN")
+      .filter((p) => p.status === "READY")
       .sort((a, b) => a.number - b.number)
       .slice(0, 5)
       .map((p) => ({
@@ -275,6 +275,11 @@ export class StateDockService {
         title: p.title,
         body: p.body,
       }));
+    const plannedIdeas = plans
+      .filter((p) => p.status === "PLAN")
+      .sort((a, b) => a.number - b.number)
+      .slice(0, 5)
+      .map((p) => ({ reference: p.reference, number: p.number, title: p.title, body: p.body }));
     return {
       project: {
         id: project.id,
@@ -286,13 +291,14 @@ export class StateDockService {
       activeTasks,
       lastCompletedTask,
       nextPendingTasks,
+      plannedIdeas,
       keyFiles: files.map((f) => ({ path: f.path })),
     };
   }
   async claimNextTask(projectKey: string, actor: Actor): Promise<Plan | null> {
     const project = await this.getProject(projectKey);
     for (let attempt = 0; attempt < 10; attempt++) {
-      const plans = await this.listPlans(project.id, "PLAN");
+      const plans = await this.listPlans(project.id, "READY");
       const candidate = [...plans].sort((a, b) => a.number - b.number)[0];
       if (!candidate) return null;
       try {

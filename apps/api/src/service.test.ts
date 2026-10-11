@@ -118,7 +118,7 @@ describe("StateDock API", () => {
   });
   it("keeps activity append-only after project deletion and reruns migration safely", async () => {
     await migrate(client);
-    assert.equal((await client.execute("SELECT * FROM schema_migrations")).rows.length, 8);
+    assert.equal((await client.execute("SELECT * FROM schema_migrations")).rows.length, 9);
     const p = await app.request("/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -516,7 +516,7 @@ describe("StateDock API", () => {
     await app.request("/api/projects/ctx/plans", {
       method: "POST",
       headers,
-      body: JSON.stringify({ title: "Next idea", status: "PLAN", body: "Plan body" }),
+      body: JSON.stringify({ title: "Next idea", status: "READY", body: "Plan body" }),
     });
 
     const res = await app.request("/api/projects/ctx/resume");
@@ -545,12 +545,12 @@ describe("StateDock API", () => {
     await app.request("/api/projects/queue/plans", {
       method: "POST",
       headers,
-      body: JSON.stringify({ title: "Task A", status: "PLAN" }),
+      body: JSON.stringify({ title: "Task A", status: "READY" }),
     });
     await app.request("/api/projects/queue/plans", {
       method: "POST",
       headers,
-      body: JSON.stringify({ title: "Task B", status: "PLAN" }),
+      body: JSON.stringify({ title: "Task B", status: "READY" }),
     });
 
     const claimRes = await app.request("/api/projects/queue/claim-next", {

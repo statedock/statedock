@@ -162,13 +162,15 @@ export async function handleDiscordQuery(
     const plans = await repo.listPlans(resolved.project.id);
     const doing = plans.filter((p) => p.status === "WORKING").length;
     const waiting = plans.filter((p) => p.status === "WAITING").length;
+    const ready = plans.filter((p) => p.status === "READY").length;
     const plan = plans.filter((p) => p.status === "PLAN").length;
     const done = plans.filter((p) => p.status === "DONE").length;
 
     const fields = [
       { name: "正在进行", value: `${doing} 项`, inline: true },
       { name: "需要介入", value: `${waiting} 项`, inline: true },
-      { name: "待安排想法", value: `${plan} 项`, inline: true },
+      { name: "待执行", value: `${ready} 项`, inline: true },
+      { name: "待讨论想法", value: `${plan} 项`, inline: true },
       { name: "已完成", value: `${done} 项`, inline: true },
     ];
 

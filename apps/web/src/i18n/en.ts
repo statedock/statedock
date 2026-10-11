@@ -68,6 +68,7 @@ export const en: Translations = {
     },
     statuses: {
       PLAN: "Planned",
+      READY: "Ready",
       WORKING: "In Progress",
       WAITING: "Needs Input",
       DONE: "Completed",
@@ -199,6 +200,9 @@ export const en: Translations = {
       noInProgress: "No active tasks in progress",
       noInProgressHint: "Capture new ideas above, or start a planned task.",
       planned: "Planned",
+      readyAgent: "(Ready for agents)",
+      noReady: "No ready tasks. Mark an agreed task as Ready.",
+      moreReady: (n: number) => `${n} more ready tasks. Open task board.`,
       plannedAgent: "(Ideas & Backlog)",
       planAndExecute: "All & Schedule",
       noDiscussionBackground: "No discussion context added",
@@ -459,6 +463,16 @@ export const en: Translations = {
       badgeAllProjects: "All Projects",
       badgeProjectPrefix: "Project: ",
       badgeNoProjects: "No Projects (Paused)",
+    },
+    readyExecution: {
+      title: "Let your agent execute Ready tasks",
+      copy: "Copy Ready directive",
+      description:
+        "No task numbers needed. When idle, your agent claims only this project’s Ready tasks and stops when empty. Does not launch an agent.",
+      preview: "View directive",
+      copied: "Copied. Send it to the agent connected to this project.",
+      copyFailed: "Copy failed. Copy the directive below manually.",
+      unavailable: "Could not verify the instance address. Directive unavailable.",
     },
     batch: {
       summaryTitle: (count: number) => `Schedule Execution · ${count} selected`,

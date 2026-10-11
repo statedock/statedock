@@ -26,7 +26,7 @@ export function createServer(service: StateDockService, identity: Actor, publicO
         (origin
           ? `This connection belongs exclusively to ${origin}. Before any write, call get_instance_info using this connection and compare publicOrigin with the repository binding. If it differs, or the connection was just reconfigured, stop and reconnect; never fall back to another StateDock instance. `
           : "") +
-        "StateDock records human-readable project goals. For a direct implementation request, create a WORKING task; for an undecided idea, create a PLAN. Keep body for discussion and decisions, summary for the concise human-readable outcome. Read a task and relevant project files before work. Append the concise result before DONE; use DROPPED with a short reason when the user decides not to proceed. MCP supplies tools but does not monitor chats. Actor identity comes from server configuration.",
+        "StateDock records human-readable project goals. For a direct implementation request, create a WORKING task; for an undecided idea, create a PLAN. READY means approved for execution; claim_next_task only claims READY tasks. Keep body for discussion and decisions, summary for the concise human-readable outcome. Read a task and relevant project files before work. Append the concise result before DONE; use DROPPED with a short reason when the user decides not to proceed. MCP supplies tools but does not monitor chats. Actor identity comes from server configuration.",
     },
   );
   const project = z.string().min(1).describe("Project UUID or slug");
@@ -216,7 +216,7 @@ export function createServer(service: StateDockService, identity: Actor, publicO
   );
   tool(
     "claim_next_task",
-    "Atomically claim and start the next pending PLAN task in the project. Returns null if queue is empty.",
+    "Atomically claim and start the next READY task (PLAN ideas are never claimed) in the project. Returns null if queue is empty.",
     { project: project.optional() },
     false,
     async ({ project: projectKey }) => {
@@ -233,7 +233,7 @@ export function createServer(service: StateDockService, identity: Actor, publicO
           };
       }
       const claimed = await service.claimNextTask(target, actor);
-      if (!claimed) return { claimed: false, message: "No pending PLAN tasks in project queue." };
+      if (!claimed) return { claimed: false, message: "No READY tasks in project queue." };
       return { claimed: true, plan: claimed };
     },
   );

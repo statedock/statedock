@@ -4,7 +4,7 @@ import { actorSchema, fileSchema, planStatuses } from "./index.js";
 
 describe("core schemas", () => {
   it("defines the goal lifecycle states", () =>
-    assert.deepEqual(planStatuses, ["PLAN", "WORKING", "WAITING", "DONE", "DROPPED"]));
+    assert.deepEqual(planStatuses, ["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"]));
   it("defaults actors to human", () =>
     assert.equal(actorSchema.parse({ id: "jason" }).type, "human"));
   it("rejects traversal in project file paths", () =>

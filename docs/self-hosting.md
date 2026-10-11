@@ -131,3 +131,7 @@ python3 apps/online/scripts/export-local.py /PATH/TO/LOCAL_DATABASE.sqlite /PRIV
 ```
 
 The script reads the source without modifying it and creates a protected JSON file. Sign in as the account that should own the imported projects, then use **Import Local SQLite Export** in its empty workspace. This is a bounded first-use migration: at most 2 MB, 20 projects, 30 tasks, 20 documents, 50 activities and 50 task events, with at most 90 records in total. It does not import users, project members, OAuth credentials, notification settings or attachment bytes. It is not a replacement for the D1/R2/KV backup procedure. Never commit or share the export; remove the private export when no longer needed.
+
+## Ready task execution
+
+Planned keeps ideas for discussion. Mark an agreed task Ready in the PWA, then copy the Ready directive and send it to the coding agent bound to this instance and project. The agent claims one Ready task at a time and writes results back. Telegram/Discord captures and Inbox moves stay Planned. This does not create a scheduler or remote-control service.

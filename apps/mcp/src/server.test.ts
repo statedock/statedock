@@ -102,8 +102,15 @@ test("stdio MCP tools share API state, record actor notes, and report errors", a
     const ctx = (resumed.structuredContent as any).data;
     assert.equal(ctx.project.slug, "demo");
     assert.equal(ctx.lastCompletedTask.reference, plan.reference);
-    assert.equal(ctx.nextPendingTasks.length, 1);
-    assert.equal(ctx.nextPendingTasks[0].reference, data.reference);
+    assert.equal(ctx.nextPendingTasks.length, 0);
+    assert.equal(
+      ((await call("claim_next_task", { project: "demo" })).structuredContent as any).data.claimed,
+      false,
+    );
+    await call("update_plan", { reference: data.reference, status: "READY" });
+    const readyCtx = (await call("resume_project", { project: "demo" })).structuredContent as any;
+    assert.equal(readyCtx.data.nextPendingTasks.length, 1);
+    assert.equal(readyCtx.data.nextPendingTasks[0].reference, data.reference);
     const autoResumed = await call("resume_project", {});
     assert.equal((autoResumed.structuredContent as any).data.project.slug, "demo");
     const claimRes = await call("claim_next_task", { project: "demo" });

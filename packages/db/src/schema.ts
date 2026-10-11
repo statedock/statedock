@@ -28,7 +28,7 @@ export const plans = sqliteTable(
     title: text("title").notNull(),
     body: text("body").notNull().default(""),
     summary: text("summary"),
-    status: text("status", { enum: ["PLAN", "WORKING", "WAITING", "DONE", "DROPPED"] })
+    status: text("status", { enum: ["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"] })
       .notNull()
       .default("PLAN"),
     createdAt: text("created_at").notNull(),

@@ -259,10 +259,10 @@ export async function handleTelegramQuery(
     const pId = target.project ? target.project.id : null;
     const sql = pId
       ? env.DB.prepare(
-          "SELECT p.title, p.number, p.global_number, p.status, pr.name FROM plans p JOIN projects pr ON pr.id=p.project_id WHERE pr.owner_id=? AND pr.id=? AND p.status IN ('PLAN','WORKING','WAITING') ORDER BY p.updated_at DESC LIMIT 15",
+          "SELECT p.title, p.number, p.global_number, p.status, pr.name FROM plans p JOIN projects pr ON pr.id=p.project_id WHERE pr.owner_id=? AND pr.id=? AND p.status IN ('PLAN','READY','WORKING','WAITING') ORDER BY p.updated_at DESC LIMIT 15",
         ).bind(sub.user_id, pId)
       : env.DB.prepare(
-          "SELECT p.title, p.number, p.global_number, p.status, pr.name FROM plans p JOIN projects pr ON pr.id=p.project_id WHERE pr.owner_id=? AND p.status IN ('PLAN','WORKING','WAITING') ORDER BY p.updated_at DESC LIMIT 15",
+          "SELECT p.title, p.number, p.global_number, p.status, pr.name FROM plans p JOIN projects pr ON pr.id=p.project_id WHERE pr.owner_id=? AND p.status IN ('PLAN','READY','WORKING','WAITING') ORDER BY p.updated_at DESC LIMIT 15",
         ).bind(sub.user_id);
     const rows = await sql.all<{
       title: string;

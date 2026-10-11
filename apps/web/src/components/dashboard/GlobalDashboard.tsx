@@ -14,14 +14,17 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const statusBadgeVariant: Record<PlanStatus, "plan" | "working" | "waiting" | "done" | "dropped"> =
-  {
-    PLAN: "plan",
-    WORKING: "working",
-    WAITING: "waiting",
-    DONE: "done",
-    DROPPED: "dropped",
-  };
+const statusBadgeVariant: Record<
+  PlanStatus,
+  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
+> = {
+  PLAN: "plan",
+  READY: "ready",
+  WORKING: "working",
+  WAITING: "waiting",
+  DONE: "done",
+  DROPPED: "dropped",
+};
 
 export interface GlobalPlanItem {
   plan: Plan;
@@ -86,8 +89,9 @@ export function GlobalDashboard({
       (i) => i.plan.status === "WORKING" || i.plan.status === "WAITING",
     ).length;
     const doneCount = pPlans.filter((i) => i.plan.status === "DONE").length;
+    const readyCount = pPlans.filter((i) => i.plan.status === "READY").length;
     const planCount = pPlans.filter((i) => i.plan.status === "PLAN").length;
-    return { project: p, total: pPlans.length, activeCount, doneCount, planCount };
+    return { project: p, total: pPlans.length, activeCount, doneCount, planCount, readyCount };
   });
 
   return (
@@ -325,7 +329,7 @@ export function GlobalDashboard({
             </CardHeader>
 
             <CardContent className="p-3 space-y-2">
-              {projectStats.map(({ project, activeCount, doneCount, planCount }) => (
+              {projectStats.map(({ project, activeCount, doneCount, planCount, readyCount }) => (
                 <div
                   key={project.id}
                   onClick={() => onSelectProject(project.id)}
@@ -356,6 +360,11 @@ export function GlobalDashboard({
                         <span>
                           {doneCount} {gd.done}
                         </span>
+                        {readyCount > 0 && (
+                          <Badge variant="ready" className="text-[10px]">
+                            {s.READY} {readyCount}
+                          </Badge>
+                        )}
                         {planCount > 0 && (
                           <>
                             <span>·</span>

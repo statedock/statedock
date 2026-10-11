@@ -15,6 +15,12 @@ import { drainStorageCleanup } from "./storage-service.js";
 
 const app = new Hono<{ Bindings: OnlineEnv }>();
 
+// Public addresses only; no credentials or account data.
+app.get("/api/instance-info", (c) => {
+  const { publicOrigin, mcpUrl } = instanceConfig(c.env);
+  return c.json({ data: { publicOrigin, mcpUrl } }, 200, { "Cache-Control": "no-store" });
+});
+
 app.get("/api/health", async (c) => {
   await c.env.DB.prepare("SELECT 1").first();
   return c.json({ status: "ok", environment: c.env.APP_ENV });

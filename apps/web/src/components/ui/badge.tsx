@@ -15,6 +15,8 @@ const badgeVariants = cva(
         outline: "text-foreground",
         // StateDock workflow status badges
         plan: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300",
+        ready:
+          "border-cyan-500/20 bg-cyan-500/10 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300",
         working:
           "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-300",
         waiting:

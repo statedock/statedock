@@ -66,7 +66,8 @@ export const zh: Translations = {
       syncError: "连接异常",
     },
     statuses: {
-      PLAN: "待安排",
+      PLAN: "待讨论",
+      READY: "待执行",
       WORKING: "正在做",
       WAITING: "需要我处理",
       DONE: "已完成",
@@ -193,8 +194,11 @@ export const zh: Translations = {
       noDescription: "尚无具体说明",
       noInProgress: "当前没有正在进行的工作",
       noInProgressHint: "在上方随手记记录新想法，或从待安排中挑选任务执行",
-      planned: "待安排",
-      plannedAgent: "(想法与待执行工作)",
+      planned: "待讨论",
+      readyAgent: "(可由 Agent 认领)",
+      noReady: "没有待执行任务。将已明确的任务改为待执行。",
+      moreReady: (n: number) => `还有 ${n} 项待执行任务，查看任务列表。`,
+      plannedAgent: "(想法与暂存)",
       planAndExecute: "全部与安排执行",
       noDiscussionBackground: "尚未补充讨论背景",
       morePlanned: (count: number) =>
@@ -445,6 +449,16 @@ export const zh: Translations = {
       badgeAllProjects: "全部项目",
       badgeProjectPrefix: "项目：",
       badgeNoProjects: "未关联项目（已暂停）",
+    },
+    readyExecution: {
+      title: "交给 Agent 执行 Ready",
+      copy: "复制 Ready 执行指令",
+      description:
+        "无需选择编号。Agent 空闲时只领取本项目的 Ready；没有任务就结束，不会自动启动 Agent。",
+      preview: "查看执行指令",
+      copied: "已复制，可发送给已连接此项目的 Agent。",
+      copyFailed: "复制失败，请从下方指令中手动复制。",
+      unavailable: "无法确认实例地址，暂时不能生成执行指令。",
     },
     batch: {
       summaryTitle: (count: number) => `安排顺序执行 · ${count} 项已选`,

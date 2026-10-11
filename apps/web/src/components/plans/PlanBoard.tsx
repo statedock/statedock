@@ -1,3 +1,4 @@
+import { ReadyExecution } from "../../ReadyExecution";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +8,19 @@ import { BatchExecution } from "../../BatchExecution";
 import { TaskDetail } from "./TaskDetail";
 import { TaskList } from "./TaskList";
 
-const states: PlanStatus[] = ["WORKING", "PLAN", "WAITING", "DONE", "DROPPED"];
+const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
 
-const statusBadgeVariant: Record<PlanStatus, "plan" | "working" | "waiting" | "done" | "dropped"> =
-  {
-    PLAN: "plan",
-    WORKING: "working",
-    WAITING: "waiting",
-    DONE: "done",
-    DROPPED: "dropped",
-  };
+const statusBadgeVariant: Record<
+  PlanStatus,
+  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
+> = {
+  PLAN: "plan",
+  READY: "ready",
+  WORKING: "working",
+  WAITING: "waiting",
+  DONE: "done",
+  DROPPED: "dropped",
+};
 
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
 
@@ -101,6 +105,7 @@ export function PlanBoard({
   } = model;
   return (
     <div className="space-y-4">
+      <ReadyExecution key={`ready-${project.id}`} project={project} />
       <BatchExecution key={project.id} project={project} plans={plans} />
       {/* Top Filter and Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 shadow-sm">

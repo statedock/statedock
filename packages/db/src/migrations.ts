@@ -32,4 +32,8 @@ export const migrations = [
     version: 8,
     sql: readFileSync(new URL("./migrations/0007_waiting_events.sql", import.meta.url), "utf8"),
   },
+  {
+    version: 9,
+    sql: readFileSync(new URL("./migrations/0008_ready_tasks.sql", import.meta.url), "utf8"),
+  },
 ];

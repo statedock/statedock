@@ -4,16 +4,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { Plan, PlanStatus, Project } from "@statedock/core";
 import { AlertCircle, Check, ChevronRight, HelpCircle, Plus } from "lucide-react";
 
-const states: PlanStatus[] = ["WORKING", "PLAN", "WAITING", "DONE", "DROPPED"];
+const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
 
-const statusBadgeVariant: Record<PlanStatus, "plan" | "working" | "waiting" | "done" | "dropped"> =
-  {
-    PLAN: "plan",
-    WORKING: "working",
-    WAITING: "waiting",
-    DONE: "done",
-    DROPPED: "dropped",
-  };
+const statusBadgeVariant: Record<
+  PlanStatus,
+  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
+> = {
+  PLAN: "plan",
+  READY: "ready",
+  WORKING: "working",
+  WAITING: "waiting",
+  DONE: "done",
+  DROPPED: "dropped",
+};
 
 import { parseBlocker } from "../../task-summary";
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";

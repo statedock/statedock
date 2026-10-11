@@ -3,16 +3,19 @@ import type { Plan, PlanStatus, Project } from "@statedock/core";
 import { useState } from "react";
 import { useTaskDraft } from "../../useTaskDraft";
 
-const states: PlanStatus[] = ["WORKING", "PLAN", "WAITING", "DONE", "DROPPED"];
+const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
 
-const statusBadgeVariant: Record<PlanStatus, "plan" | "working" | "waiting" | "done" | "dropped"> =
-  {
-    PLAN: "plan",
-    WORKING: "working",
-    WAITING: "waiting",
-    DONE: "done",
-    DROPPED: "dropped",
-  };
+const statusBadgeVariant: Record<
+  PlanStatus,
+  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
+> = {
+  PLAN: "plan",
+  READY: "ready",
+  WORKING: "working",
+  WAITING: "waiting",
+  DONE: "done",
+  DROPPED: "dropped",
+};
 
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
 

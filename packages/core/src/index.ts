@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const planStatuses = ["PLAN", "WORKING", "WAITING", "DONE", "DROPPED"] as const;
+export const planStatuses = ["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"] as const;
 export type PlanStatus = (typeof planStatuses)[number];
 
 export const actorSchema = z.object({
@@ -123,6 +123,8 @@ export const planLocatorSchema = z.union([
   z.object({ project: z.string().min(1), number: z.number().int().positive().safe() }).strict(),
 ]);
 export function planCreationMessage(plan: Plan): string {
+  if (plan.status === "READY")
+    return `${plan.reference} Task 已就绪：${plan.title}。可由 Agent 认领执行。`;
   return plan.status === "WORKING"
     ? `${plan.reference} Task 已开始：${plan.title}。`
     : `${plan.reference} 想法已记录：${plan.title}。以后可说“开始 ${plan.reference}”开始实施。`;

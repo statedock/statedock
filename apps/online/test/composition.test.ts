@@ -12,6 +12,9 @@ test("composed routes preserve session, origin, API and asset boundaries", async
   try {
     assert.deepEqual(await (await request("/api/health")).json(), { status: "ok", environment: "test" });
     assert.deepEqual(await (await request("/api/auth/session")).json(), { data: null });
+    const instance = await request("/api/instance-info");
+    assert.equal(instance.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await instance.json(), {data:{publicOrigin:"https://dock.example.test",mcpUrl:"https://dock.example.test/mcp"}});
     for (const path of ["/api/auth/mcp-clients", "/api/auth/bark", "/api/auth/ntfy", "/api/auth/telegram", "/api/auth/discord/subscriber", "/api/auth/notifications/bark/default", "/api/projects", "/mcp"]) {
       assert.equal((await request(path)).status, 401, path);
     }
