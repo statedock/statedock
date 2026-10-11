@@ -49,7 +49,7 @@ test("Task writes dispatch encrypted Web Push without a browser and retry each d
       assert.ok(
         !Buffer.from(request.init.body as Uint8Array).includes(Buffer.from("Ship notification")),
       );
-      assert.equal(request.init.redirect, "error");
+      assert.equal(request.init.redirect, "manual");
     }
     assert.equal(
       (

@@ -80,7 +80,8 @@ export async function sendWebPush(env: OnlineEnv, device: PushDevice, notice: Pu
   try {
     response = await fetch(device.endpoint, {
       ...payload,
-      redirect: "error",
+      // Workers supports follow/manual only. Non-2xx (including redirects) are rejected below.
+      redirect: "manual",
       signal: AbortSignal.timeout(10000),
     });
   } catch {
