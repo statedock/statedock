@@ -1,3 +1,4 @@
+import { statusAppearance } from "./status-appearance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -10,18 +11,6 @@ import { Attachments } from "../../Attachments";
 import { TaskFollowUp } from "../../TaskFollowUp";
 
 const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
-
-const statusBadgeVariant: Record<
-  PlanStatus,
-  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
-> = {
-  PLAN: "plan",
-  READY: "ready",
-  WORKING: "working",
-  WAITING: "waiting",
-  DONE: "done",
-  DROPPED: "dropped",
-};
 
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
 
@@ -245,19 +234,19 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
                   <button
                     key={s}
                     type="button"
+                    aria-pressed={isActive}
                     onClick={() => {
                       setStatus(s);
                       setDirty(true);
                     }}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-all ${
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                       isActive
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? statusAppearance(s).selected +
+                          " shadow-sm ring-2 ring-offset-2 ring-offset-background"
+                        : statusAppearance(s).button
                     }`}
                   >
-                    <Badge variant={statusBadgeVariant[s]} className="px-1 py-0 text-[10px]">
-                      {getStatusLabel(s)}
-                    </Badge>
+                    {getStatusLabel(s)}
                   </button>
                 );
               })}

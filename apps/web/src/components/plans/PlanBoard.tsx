@@ -1,5 +1,5 @@
+import { statusAppearance } from "./status-appearance";
 import { ReadyExecution } from "../../ReadyExecution";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Plan, PlanStatus, Project } from "@statedock/core";
@@ -9,18 +9,6 @@ import { TaskDetail } from "./TaskDetail";
 import { TaskList } from "./TaskList";
 
 const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
-
-const statusBadgeVariant: Record<
-  PlanStatus,
-  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
-> = {
-  PLAN: "plan",
-  READY: "ready",
-  WORKING: "working",
-  WAITING: "waiting",
-  DONE: "done",
-  DROPPED: "dropped",
-};
 
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
 
@@ -114,6 +102,7 @@ export function PlanBoard({
           <Button
             variant={filter === "ALL" ? "secondary" : "ghost"}
             size="sm"
+            aria-pressed={filter === "ALL"}
             onClick={() => setFilter("ALL")}
             className="h-8 text-xs shrink-0"
           >
@@ -124,18 +113,14 @@ export function PlanBoard({
             return (
               <Button
                 key={s}
-                variant={filter === s ? "secondary" : "ghost"}
+                variant="outline"
+                aria-pressed={filter === s}
                 size="sm"
                 onClick={() => setFilter(s)}
-                className="h-8 text-xs shrink-0"
+                className={`h-8 shrink-0 text-xs font-semibold ${filter === s ? statusAppearance(s).selected + " ring-2 ring-offset-2 ring-offset-background" : statusAppearance(s).button}`}
               >
-                <Badge
-                  variant={statusBadgeVariant[s]}
-                  className="mr-1 px-1 py-0 text-[10px] whitespace-nowrap"
-                >
-                  {getStatusLabel(s)}
-                </Badge>
-                {count > 0 && <span className="text-muted-foreground">{count}</span>}
+                {getStatusLabel(s)}
+                {count > 0 && <span className="opacity-80">{count}</span>}
               </Button>
             );
           })}

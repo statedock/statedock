@@ -1,22 +1,10 @@
-import { Badge } from "@/components/ui/badge";
+import { statusAppearance } from "./status-appearance";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Plan, PlanStatus, Project } from "@statedock/core";
 import { AlertCircle, Check, ChevronRight, HelpCircle, Plus } from "lucide-react";
 
 const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
-
-const statusBadgeVariant: Record<
-  PlanStatus,
-  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
-> = {
-  PLAN: "plan",
-  READY: "ready",
-  WORKING: "working",
-  WAITING: "waiting",
-  DONE: "done",
-  DROPPED: "dropped",
-};
 
 import { parseBlocker } from "../../task-summary";
 export { parseBlocker, parseHandoffSummary } from "../../task-summary";
@@ -117,6 +105,7 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
               key={plan.id}
               role="button"
               tabIndex={0}
+              aria-pressed={isSelected}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -127,10 +116,10 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
                 setDirty(false);
                 onSelectPlan(plan);
               }}
-              className={`group relative flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-4 transition-all shadow-sm ${
+              className={`group relative flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-4 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusAppearance(plan.status).card} ${
                 isSelected
-                  ? "border-blue-500/60 bg-blue-500/[0.04] ring-1 ring-blue-500/20"
-                  : "border-border/60 bg-card hover:border-border hover:bg-muted/40"
+                  ? "border-primary ring-2 ring-primary/30"
+                  : "border-border/60 hover:border-primary/40"
               }`}
             >
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -141,12 +130,11 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
                   <h4 className="truncate text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary">
                     {plan.title}
                   </h4>
-                  <Badge
-                    variant={statusBadgeVariant[plan.status]}
-                    className="ml-auto shrink-0 whitespace-nowrap text-[10px]"
+                  <span
+                    className={`ml-auto shrink-0 whitespace-nowrap text-xs font-semibold ${statusAppearance(plan.status).text}`}
                   >
                     {getStatusLabel(plan.status)}
-                  </Badge>
+                  </span>
                 </div>
                 {(plan.status === "READY" || plan.assignedAgentId) && (
                   <p className="text-[11px] text-muted-foreground">
