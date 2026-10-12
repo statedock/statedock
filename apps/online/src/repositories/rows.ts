@@ -18,6 +18,8 @@ export interface PlanRow {
   body: string;
   summary: string | null;
   status: PlanStatus;
+  assigned_agent_id: string | null;
+  claimed_agent_id: string | null;
   created_at: string;
   updated_at: string;
 }

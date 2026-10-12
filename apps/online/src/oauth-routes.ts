@@ -37,7 +37,13 @@ app.get("/oauth/authorize", async (c) => {
     const details = await oauth.describeConsent(authRequest);
     const consent = await oauth.beginConsent(authRequest);
 
+    const agents = await c.env.DB.prepare(
+      "SELECT id,name FROM agent_profiles WHERE user_id=? AND deleted_at IS NULL ORDER BY name,id",
+    )
+      .bind(session.id)
+      .all<{ id: string; name: string }>();
     const html = renderConsentPage({
+      agents: agents.results,
       details,
       handle: consent.handle,
       userEmail: session.email,
@@ -102,6 +108,15 @@ app.post("/oauth/authorize", async (c) => {
       return new Response(null, { status: 302, headers: denied.headers });
     }
 
+    const agentId = String(form.get("agentId") || "");
+    const agent = agentId
+      ? await c.env.DB.prepare(
+          "SELECT id,name FROM agent_profiles WHERE id=? AND user_id=? AND deleted_at IS NULL",
+        )
+          .bind(agentId, session.id)
+          .first<{ id: string; name: string }>()
+      : null;
+    if (agentId && !agent) return c.json({ error: "invalid_agent" }, 400);
     const requestedScopes = form.getAll("scope").map(String);
     const approvedScopes = requestedScopes.length > 0 ? requestedScopes : ["mcp:read", "mcp:write"];
     const approved = await oauth.approveConsent(c.req.raw, handle, {
@@ -109,6 +124,8 @@ app.post("/oauth/authorize", async (c) => {
     });
     const { redirectTo } = await oauth.completeAuthorization({
       request: approved.request,
+      // Independent hosts may share a client and callback; retain their separate grants.
+      revokeExistingGrants: false,
       userId: session.id,
       metadata: { email: session.email },
       scope: approved.request.scope,
@@ -117,6 +134,8 @@ app.post("/oauth/authorize", async (c) => {
         email: session.email,
         isApiKey: false,
         authVersion: session.auth_version,
+        agentId: agent?.id ?? null,
+        agentName: agent?.name ?? null,
       },
     });
 

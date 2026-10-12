@@ -5,11 +5,14 @@ import { createDatabase } from "../../../packages/db/dist/index.js";
 import { StateDockService } from "@statedock/core";
 import { D1Repository } from "../src/repository.js";
 import { fixture } from "./fixture.js";
-const actor = { id: "one", type: "agent" as const };
+const actor = { id: "one", type: "agent" as const, agentId: "ready-agent" };
 
 test("Ready queue excludes ideas, preserves project isolation and supports demotion", async () => {
   const f = await fixture();
   try {
+    await f.client.execute(
+      "INSERT INTO agent_profiles(id,user_id,name,created_at) VALUES('ready-agent','one','Ready Agent','now')",
+    );
     const repo = new D1Repository(f.db, "one");
     const service = new StateDockService(repo);
     const a = await repo.createProject({ slug: "ready-a", name: "A" }, actor);
@@ -24,12 +27,12 @@ test("Ready queue excludes ideas, preserves project isolation and supports demot
     const ctx = await service.resumeProject(a.id);
     assert.equal(ctx.nextPendingTasks[0].reference, ready.reference);
     assert.equal(ctx.plannedIdeas[0].reference, idea.reference);
-    assert.equal((await service.claimNextTask(a.id, actor))?.id, ready.id);
-    assert.equal(await service.claimNextTask(a.id, actor), null);
+    assert.equal((await service.claimNextTask(a.id, actor, "unassigned"))?.id, ready.id);
+    assert.equal(await service.claimNextTask(a.id, actor, "unassigned"), null);
     assert.equal((await repo.getPlan(b.id, other.number)).status, "READY");
     await repo.updatePlan(a.id, idea.number, { status: "READY" }, actor);
     await repo.updatePlan(a.id, idea.number, { status: "PLAN" }, actor);
-    assert.equal(await service.claimNextTask(a.id, actor), null);
+    assert.equal(await service.claimNextTask(a.id, actor, "unassigned"), null);
     // Moving an Inbox idea changes only its project, not its execution authorization.
     const moved = await service.movePlan({ reference: idea.reference }, b.id, actor);
     assert.equal(moved.status, "PLAN");
@@ -43,7 +46,7 @@ test("Ready migration preserves populated attachments, feedback, events", async 
   try {
     await client.execute("PRAGMA foreign_keys=ON");
     for (const name of readdirSync(new URL("../migrations/", import.meta.url)).sort()) {
-      if (name === "0021_ready_tasks.sql") continue;
+      if (name >= "0021_ready_tasks.sql") continue;
       await client.executeMultiple(
         readFileSync(new URL(`../migrations/${name}`, import.meta.url), "utf8"),
       );

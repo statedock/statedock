@@ -1,6 +1,7 @@
 import { useI18n } from "@/i18n/context";
 import type { Plan, PlanStatus, Project } from "@statedock/core";
-import { useState } from "react";
+import { api } from "../../api";
+import { useEffect, useState } from "react";
 import { useTaskDraft } from "../../useTaskDraft";
 
 const states: PlanStatus[] = ["WORKING", "READY", "PLAN", "WAITING", "DONE", "DROPPED"];
@@ -31,6 +32,7 @@ export interface Props {
     body: string;
     summary: string | null;
     status: PlanStatus;
+    assignedAgentId?: string | null;
     expectedUpdatedAt: string;
   }) => Promise<void | boolean>;
   onStartPlan: (reference: string) => Promise<void>;
@@ -56,6 +58,38 @@ export function usePlanBoard({
   const pI18n = t.app.plans;
   const getStatusLabel = (s: PlanStatus) => t.app.statuses[s];
 
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [agentsError, setAgentsError] = useState("");
+  const [agentFilter, setAgentFilter] = useState("ALL");
+  useEffect(() => {
+    let active = true;
+    setAgents([]);
+    setAgentsError("");
+    setAgentFilter("ALL");
+    const load = () => {
+      api<{ id: string; name: string }[]>(`/auth/agents?project=${encodeURIComponent(project.id)}`)
+        .then((rows) => {
+          if (active) {
+            setAgents(rows);
+            setAgentsError("");
+            setAgentFilter((value) =>
+              value === "ALL" || value === "UNASSIGNED" || rows.some((a) => a.id === value)
+                ? value
+                : "ALL",
+            );
+          }
+        })
+        .catch((error) => {
+          if (active) setAgentsError((error as Error).message);
+        });
+    };
+    load();
+    window.addEventListener("statedock:agents-changed", load);
+    return () => {
+      active = false;
+      window.removeEventListener("statedock:agents-changed", load);
+    };
+  }, [project.id]);
   const [filter, setFilter] = useState<string>("ALL");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"updated" | "number">("updated");
@@ -72,6 +106,8 @@ export function usePlanBoard({
     setSummary,
     status,
     setStatus,
+    assignedAgentId,
+    setAssignedAgentId,
     dirty,
     setDirty,
     baseline,
@@ -90,13 +126,20 @@ export function usePlanBoard({
         `${natural} ${p.reference} ${p.title} ${p.body} ${p.summary ?? ""}`
           .toLowerCase()
           .includes(query.toLowerCase());
-      return matchFilter && matchQuery;
+      const matchAgent =
+        agentFilter === "ALL" ||
+        (agentFilter === "UNASSIGNED" ? !p.assignedAgentId : p.assignedAgentId === agentFilter);
+      return matchFilter && matchQuery && matchAgent;
     })
     .sort((a, b) =>
       sort === "number" ? a.number - b.number : b.updatedAt.localeCompare(a.updatedAt),
     );
 
   return {
+    agents,
+    agentsError,
+    agentFilter,
+    setAgentFilter,
     project,
     projects,
     plans,
@@ -129,6 +172,8 @@ export function usePlanBoard({
     setSummary,
     status,
     setStatus,
+    assignedAgentId,
+    setAssignedAgentId,
     dirty,
     setDirty,
     baseline,

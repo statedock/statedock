@@ -115,6 +115,12 @@ http_headers = { "Authorization" = "Bearer sdm_YOUR_TOKEN_HERE" }`;
                 2. Quickstart
               </a>
               <a
+                href="#identities"
+                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
+              >
+                Agent Identities &amp; Ready queues
+              </a>
+              <a
                 href="#collaboration"
                 className="block py-1 text-muted-foreground hover:text-primary transition-colors font-medium text-foreground"
               >
@@ -302,6 +308,70 @@ http_headers = { "Authorization" = "Bearer sdm_YOUR_TOKEN_HERE" }`;
                 prompt to allow ChatGPT to read your projects and save planned tasks.
               </p>
             </div>
+          </section>
+
+          <section id="identities" className="space-y-5 scroll-mt-20">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Agent Identities &amp; Ready queues
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Create identities to assign tasks and group MCP connections. An identity doesn&apos;t
+              create or launch an AI agent.
+            </p>
+            <ol className="list-decimal pl-5 space-y-3 text-sm text-muted-foreground">
+              <li>
+                In MCP Connections, use <strong>Add Identity</strong>. Manage existing entries in{" "}
+                <strong>Identities</strong>. Adding an identity does not select it for a new token.
+              </li>
+              <li>
+                Choose <strong>Assign to identity</strong> before creating a token, or change an
+                existing token&apos;s <strong>Identity</strong>. Its token value stays valid; the
+                new binding applies on subsequent requests.
+              </li>
+              <li>
+                For OAuth, choose an identity during authorization. Reconnect to change it. Separate
+                authorizations keep their own identity and scopes; a host may need a fresh chat to
+                refresh its connection.
+              </li>
+              <li>
+                Select <strong>Assigned Identity</strong> in the task, save, and set it to Ready.
+                Filter the task list by identity. Return Working tasks to Ready before reassigning
+                them.
+              </li>
+              <li>
+                Ask the connected agent to execute its own Ready tasks. The default{" "}
+                <code>mode=&quot;mine&quot;</code> excludes other identities and Unassigned tasks.
+                Use <code>mode=&quot;unassigned&quot;</code> only with explicit user authorization.
+              </li>
+            </ol>
+            <div className="rounded-xl border p-4 text-sm space-y-3 text-muted-foreground">
+              <p>
+                Multiple tokens sharing an identity share its queue, with atomic claims preventing
+                duplicate work. Use Codex-Mac and Codex-Cloud for separate queues.
+              </p>
+              <p>
+                <strong>Unbound</strong> describes a connection; <strong>Unassigned</strong>{" "}
+                describes a task. Unbound remote connections cannot claim Ready queues. Ready does
+                not wake an agent.
+              </p>
+              <p>
+                Delete identities from the list. Working tasks block deletion; otherwise tokens are
+                unbound and Planned, Ready and Waiting assignments are cleared. Completed history is
+                preserved.
+              </p>
+              <p>
+                Refresh instructions from this instance&apos;s{" "}
+                <a href="/skill.md" className="text-primary underline">
+                  skill.md
+                </a>
+                , then ask the agent to call <code>get_instance_info</code> and report its{" "}
+                <code>agentId</code>. Updating a skill does not change its credential binding. The
+                standalone local SQLite adapter retains its local queue.
+              </p>
+            </div>
+            <a href="/agent.md" className="text-sm text-primary underline">
+              Agent setup and queue execution guide
+            </a>
           </section>
 
           {/* Section 3: Collaboration & Full Access */}

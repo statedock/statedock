@@ -8,6 +8,7 @@ interface ClientRow {
   user_id: string;
   name: string;
   email: string;
+  agent_id: string | null;
 }
 export async function authenticateMcpClient(
   db: D1Database,
@@ -15,7 +16,7 @@ export async function authenticateMcpClient(
 ): Promise<ClientRow | null> {
   const row = await db
     .prepare(
-      "SELECT mc.id,mc.user_id,mc.name,u.email FROM mcp_clients mc JOIN users u ON u.id=mc.user_id WHERE u.disabled_at IS NULL AND u.instance_approved_at IS NOT NULL AND mc.token_hash=? AND mc.revoked_at IS NULL AND (mc.expires_at IS NULL OR mc.expires_at>?)",
+      "SELECT mc.id,mc.user_id,mc.name,mc.agent_id,u.email FROM mcp_clients mc JOIN users u ON u.id=mc.user_id WHERE u.disabled_at IS NULL AND u.instance_approved_at IS NOT NULL AND mc.token_hash=? AND mc.revoked_at IS NULL AND (mc.expires_at IS NULL OR mc.expires_at>?)",
     )
     .bind(await digest(token), new Date().toISOString())
     .first<ClientRow>();

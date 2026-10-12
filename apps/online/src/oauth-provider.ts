@@ -1,5 +1,6 @@
 import {
   OAuthProvider,
+  OAuthError,
   insufficientScope,
   type OAuthResourceAuth,
 } from "@cloudflare/workers-oauth-provider";
@@ -36,6 +37,19 @@ export function createOAuthProvider(
       resource_name: "StateDock Remote MCP Server",
     },
 
+    tokenExchangeCallback: async ({ env, userId, props }) => {
+      const user = await env.DB.prepare(
+        "SELECT auth_version FROM users WHERE id=? AND disabled_at IS NULL AND instance_approved_at IS NOT NULL",
+      )
+        .bind(userId)
+        .first<{ auth_version: number }>();
+      if (!user || props?.authVersion !== user.auth_version) {
+        throw new OAuthError("invalid_grant", {
+          description: "Account authorization is no longer valid",
+        });
+      }
+    },
+
     resolveExternalToken: async ({ token, env }) => {
       if (!token) return null;
       try {
@@ -46,6 +60,7 @@ export function createOAuthProvider(
             userId: row.user_id,
             mcpClientId: row.id,
             clientName: row.name,
+            agentId: row.agent_id,
             isApiKey: true,
           },
           audience: config.mcpUrl,
@@ -148,14 +163,16 @@ export function createOAuthProvider(
         const clientId = ctx.auth?.clientId || "client";
         const actor = isApiKey
           ? actorSchema.parse({
-              id: `mcp:${props.mcpClientId || "key"}`,
+              id: props.agentId ? `agent:${props.agentId}` : `mcp:${props.mcpClientId || "key"}`,
               type: "agent",
               name: props.clientName || "API Client",
+              agentId: props.agentId || undefined,
             })
           : actorSchema.parse({
-              id: `oauth:${clientId.slice(0, 48)}`,
+              id: props.agentId ? `agent:${props.agentId}` : `oauth:${clientId.slice(0, 48)}`,
               type: "agent",
-              name: "ChatGPT",
+              name: props.agentName || "OAuth Client",
+              agentId: props.agentId || undefined,
             });
 
         const repo = notificationRepository(env, userId);

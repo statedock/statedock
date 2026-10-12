@@ -33,14 +33,14 @@ cp apps/online/wrangler.jsonc apps/online/wrangler.deploy.jsonc
 
 The personal file is Git-ignored. Edit it:
 
-| Setting | Value |
-|---|---|
-| `name` | Your Worker name |
-| `d1_databases[0].database_name` / `database_id` | Your new D1 database |
-| `kv_namespaces[0].id` | Your new KV namespace |
-| `r2_buckets[0].bucket_name` | Your new R2 bucket |
-| `vars.PUBLIC_BASE_URL` | Your HTTPS origin, without a path |
-| `vars.EMAIL_FROM` | Your verified sending address |
+| Setting                                         | Value                             |
+| ----------------------------------------------- | --------------------------------- |
+| `name`                                          | Your Worker name                  |
+| `d1_databases[0].database_name` / `database_id` | Your new D1 database              |
+| `kv_namespaces[0].id`                           | Your new KV namespace             |
+| `r2_buckets[0].bucket_name`                     | Your new R2 bucket                |
+| `vars.PUBLIC_BASE_URL`                          | Your HTTPS origin, without a path |
+| `vars.EMAIL_FROM`                               | Your verified sending address     |
 
 Keep the application and OAuth endpoint on the same origin for the first release. Host-only session cookies intentionally do not share sessions across arbitrary subdomains. The MCP endpoint is `https://YOUR_ORIGIN/mcp`.
 
@@ -154,3 +154,19 @@ The script reads the source without modifying it and creates a protected JSON fi
 ## Ready task execution
 
 Planned keeps ideas for discussion. Mark an agreed task Ready in the PWA, then copy the Ready directive and send it to the coding agent bound to this instance and project. The agent claims one Ready task at a time and writes results back. Telegram/Discord captures and Inbox moves stay Planned. This does not create a scheduler or remote-control service.
+
+## Agent Identities and assigned Ready tasks
+
+Create identities to assign tasks and group MCP connections. An identity doesn't create or launch an AI agent. `Codex-Mac` and `Codex-Cloud` can be separate identities even when both use Codex. Multiple tokens bound to one identity share its assigned task queue.
+
+1. Open **MCP Connections → Agent Identities**. Enter a name and click **Add Identity**. The **Identities** list shows existing identities; adding one does not select it for a new token.
+2. For a new token, choose **Assign to identity**, then **Create Token**. For an existing token, change its **Identity** selector. The existing token value stays valid; its binding takes effect on subsequent MCP requests without replacing the token or updating the skill. The token's display name does not determine its identity.
+3. For OAuth, select an identity on the consent page. To change an existing OAuth connection's identity, reconnect and authorize it again. Independent authorizations can coexist even when clients share a client ID and callback; each keeps its own identity and scopes. A host may need a fresh chat or refreshed tool connection to discover changes.
+4. Open a task, choose **Assigned Identity**, save it, and set it to **Ready**. Use the task list's identity filter to review each queue. For a task already **Working**, explicitly return it to **Ready** before reassigning it.
+5. Tell the connected agent to execute its own Ready tasks. `list_ready_tasks(project, mode="mine")` and `claim_next_task(project, mode="mine")` only use the identity verified from its credentials. Other identities' tasks and **Unassigned** tasks are excluded. Only use `mode="unassigned"` when the user explicitly authorizes that queue. Claiming is atomic; clients sharing an identity cannot claim the same task twice.
+
+**Unbound** means a connection has no identity; **Unassigned** means a task has no assigned identity. Unbound connections cannot claim remote Ready queues. StateDock records and assigns work; setting Ready does not wake or launch an agent.
+
+Delete an identity with the delete button in **Identities**. Deletion is blocked while it has Working tasks. Otherwise, bound tokens become Unbound and assignments on Planned, Ready and Waiting tasks are cleared; completed task history is retained. Move or complete active work before deleting its identity.
+
+To refresh an agent's instructions, ask it to download the latest `/skill.md` from **the same connected StateDock instance** and update its installed StateDock skill. Then ask it to call `get_instance_info` and report `publicOrigin`, `mcpUrl` and `agentId`; match `agentId` to the identity in MCP Connections. It must not infer its identity from its software name or token label. Remote Cloudflare MCP uses identity queues; the standalone local SQLite adapter keeps its local queue behavior.

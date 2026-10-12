@@ -30,3 +30,17 @@ PLAN 保留待讨论；READY 表示用户已明确允许执行。PWA 可切换�
 3. 认领后核对任务项目，在已绑定仓库执行并完成必要验证。成功后 `submit_handoff` 写入真实结果，再认领下一条。不得接管其他 Agent 的 WORKING。
 4. 需求不明确或受阻时 `pause_task` 标为 WAITING、说明需要补充的信息，暂停队列。无 Ready 时安静结束，不自行创建轮询、提醒或定时任务。
 5. 用户明确给出固定编号批次时仍只执行那个批次，不能替换为动态 Ready 队列。未授权的发布、删除及外部通信仍需要遵循宿主权限规则。
+
+## Agent Identity 与 Ready 队列隔离
+
+Agent Identity 是关联任务分配与 MCP 连接的逻辑身份，不会创建、启动或唤醒真正的 AI Agent。同一软件的不同实例可以使用不同身份；多个 Token 绑定同一身份共享该身份的任务队列。
+
+- MCP Connections 的 Agent Identities 中用 Add Identity 添加身份；Identities 是已有身份列表。添加身份不会自动选择新 Token 的归属。
+- 创建 Token 前选择 Assign to identity；已有 Token 可通过 Identity 下拉修改绑定，Token 值不变，后续 MCP 请求使用新的绑定。Token 显示名称不决定身份。
+- OAuth 在授权页选择身份；修改已有 OAuth 连接身份需重新连接和授权。独立授权可共存，各自保留身份和 scopes。宿主缓存连接或工具时，可能需要刷新连接或新开对话。
+- 写入和领取前调用当前连接的 get_instance_info，确认 publicOrigin、mcpUrl 与项目绑定；用 agentId 核对网页中的身份。不得从软件名称、Token 标签或自报名称猜测身份，也不得切换到另一实例代领。
+- 人类在任务详情选择 Assigned Identity、保存并设为 READY；列表可按身份筛选。WORKING 任务交接须显式退回 READY 后改派，不抢占其他 Agent 正在执行的任务。
+- list_ready_tasks(project, mode="mine") 和 claim_next_task(project, mode="mine") 默认只列出/领取分配给当前凭据身份的 READY，排除其他身份和未分配任务。仅用户明确授权时使用 mode="unassigned"。按项目 UUID 串行认领、验证和交付，队列为空即停止。
+- Unbound 是连接未绑定身份，Unassigned 是任务未分配身份。未绑定的 Remote MCP 凭据不能领取 Ready 队列，先绑定 Token 或重新 OAuth 授权。
+- 身份删除在有 WORKING 任务时被阻止。可删除时，Token 解除绑定、PLAN/READY/WAITING 的任务分配清空，已完成历史保留。
+- 用户要求更新 skill 时从当前连接实例的 /skill.md 获取并更新宿主实际使用的 StateDock skill，再按宿主能力重载；更新 skill 不会改变凭据绑定。Cloudflare Remote MCP 使用身份队列；独立本地 SQLite adapter 保留本地队列行为。

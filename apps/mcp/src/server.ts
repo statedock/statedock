@@ -105,6 +105,7 @@ export function createServer(service: StateDockService, identity: Actor, publicO
       publicOrigin: origin,
       mcpUrl: origin ? `${origin}/mcp` : null,
       connectionName,
+      agentId: actor.agentId ?? null,
       transport: origin ? "remote" : "local",
     }),
   );
@@ -216,10 +217,10 @@ export function createServer(service: StateDockService, identity: Actor, publicO
   );
   tool(
     "claim_next_task",
-    "Atomically claim and start the next READY task (PLAN ideas are never claimed) in the project. Returns null if queue is empty.",
-    { project: project.optional() },
+    "Atomically claim your next assigned READY task. Identity is determined by credentials. Unassigned tasks require explicit mode=unassigned. Unbound cloud credentials must be bound first. Returns null if this queue is empty.",
+    { project: project.optional(), mode: z.enum(["mine", "unassigned"]).default("mine") },
     false,
-    async ({ project: projectKey }) => {
+    async ({ project: projectKey, mode }) => {
       let target = projectKey;
       if (!target) {
         const projects = await service.listProjects();
@@ -232,10 +233,17 @@ export function createServer(service: StateDockService, identity: Actor, publicO
             availableProjects: projects.map((p) => ({ id: p.id, slug: p.slug, name: p.name })),
           };
       }
-      const claimed = await service.claimNextTask(target, actor);
+      const claimed = await service.claimNextTask(target, actor, mode);
       if (!claimed) return { claimed: false, message: "No READY tasks in project queue." };
       return { claimed: true, plan: claimed };
     },
+  );
+  tool(
+    "list_ready_tasks",
+    "List only your assigned Ready tasks; mode=unassigned explicitly lists tasks with no assignment. Credential identity cannot be supplied by the caller.",
+    { project, mode: z.enum(["mine", "unassigned"]).default("mine") },
+    true,
+    ({ project: key, mode }) => service.listReadyTasks(key, actor, mode),
   );
   tool(
     "pause_task",

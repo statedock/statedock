@@ -11,7 +11,7 @@ Use your own HTTPS origin wherever this guide shows `https://dock.example.com`; 
   "mcpServers": {
     "statedock_dock_example_com": {
       "url": "https://dock.example.com/mcp",
-      "headers": {"Authorization": "Bearer YOUR_PERSONAL_TOKEN"}
+      "headers": { "Authorization": "Bearer YOUR_PERSONAL_TOKEN" }
     }
   }
 }
@@ -42,3 +42,19 @@ Use the `/skill.md` served by your verified instance. This repository's English 
 3. 认领后核对任务项目，在已绑定仓库执行并完成必要验证。成功后 `submit_handoff` 写入真实结果，再认领下一条。不得接管其他 Agent 的 WORKING。
 4. 需求不明确或受阻时 `pause_task` 标为 WAITING、说明需要补充的信息，暂停队列。无 Ready 时安静结束，不自行创建轮询、提醒或定时任务。
 5. 用户明确给出固定编号批次时仍只执行那个批次，不能替换为动态 Ready 队列。未授权的发布、删除及外部通信仍需要遵循宿主权限规则。
+
+## Agent Identities and assigned Ready tasks
+
+Create identities to assign tasks and group MCP connections. An identity doesn't create or launch an AI agent. `Codex-Mac` and `Codex-Cloud` can be separate identities even when both use Codex. Multiple tokens bound to one identity share its assigned task queue.
+
+1. Open **MCP Connections → Agent Identities**. Enter a name and click **Add Identity**. The **Identities** list shows existing identities; adding one does not select it for a new token.
+2. For a new token, choose **Assign to identity**, then **Create Token**. For an existing token, change its **Identity** selector. The existing token value stays valid; its binding takes effect on subsequent MCP requests without replacing the token or updating the skill. The token's display name does not determine its identity.
+3. For OAuth, select an identity on the consent page. To change an existing OAuth connection's identity, reconnect and authorize it again. Independent authorizations can coexist even when clients share a client ID and callback; each keeps its own identity and scopes. A host may need a fresh chat or refreshed tool connection to discover changes.
+4. Open a task, choose **Assigned Identity**, save it, and set it to **Ready**. Use the task list's identity filter to review each queue. For a task already **Working**, explicitly return it to **Ready** before reassigning it.
+5. Tell the connected agent to execute its own Ready tasks. `list_ready_tasks(project, mode="mine")` and `claim_next_task(project, mode="mine")` only use the identity verified from its credentials. Other identities' tasks and **Unassigned** tasks are excluded. Only use `mode="unassigned"` when the user explicitly authorizes that queue. Claiming is atomic; clients sharing an identity cannot claim the same task twice.
+
+**Unbound** means a connection has no identity; **Unassigned** means a task has no assigned identity. Unbound connections cannot claim remote Ready queues. StateDock records and assigns work; setting Ready does not wake or launch an agent.
+
+Delete an identity with the delete button in **Identities**. Deletion is blocked while it has Working tasks. Otherwise, bound tokens become Unbound and assignments on Planned, Ready and Waiting tasks are cleared; completed task history is retained. Move or complete active work before deleting its identity.
+
+To refresh an agent's instructions, ask it to download the latest `/skill.md` from **the same connected StateDock instance** and update its installed StateDock skill. Then ask it to call `get_instance_info` and report `publicOrigin`, `mcpUrl` and `agentId`; match `agentId` to the identity in MCP Connections. It must not infer its identity from its software name or token label. Remote Cloudflare MCP uses identity queues; the standalone local SQLite adapter keeps its local queue behavior.

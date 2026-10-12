@@ -1,3 +1,4 @@
+import type { ReadyQueueMode } from "./agent-queue.js";
 import { z } from "zod";
 import {
   activitySchema,
@@ -23,6 +24,9 @@ import {
   type TaskEntry,
 } from "./index.js";
 export interface Repository {
+  claimReadyTask?(key: string, actor: Actor, mode: ReadyQueueMode): Promise<Plan | null>;
+  listReadyTasks?(key: string, actor: Actor, mode: ReadyQueueMode): Promise<Plan[]>;
+
   listEntries(plan: Plan, kind: TaskEntry["kind"]): Promise<TaskEntry[]>;
   appendEntry(
     plan: Plan,
@@ -295,7 +299,23 @@ export class StateDockService {
       keyFiles: files.map((f) => ({ path: f.path })),
     };
   }
-  async claimNextTask(projectKey: string, actor: Actor): Promise<Plan | null> {
+  async listReadyTasks(
+    projectKey: string,
+    actor: Actor,
+    mode: ReadyQueueMode = "mine",
+  ): Promise<Plan[]> {
+    if (this.store.listReadyTasks)
+      return this.store.listReadyTasks(projectKey, actorSchema.parse(actor), mode);
+    // Standalone local repositories have no credential/profile system.
+    return this.listPlans(projectKey, "READY");
+  }
+  async claimNextTask(
+    projectKey: string,
+    actor: Actor,
+    mode: ReadyQueueMode = "mine",
+  ): Promise<Plan | null> {
+    if (this.store.claimReadyTask)
+      return this.store.claimReadyTask(projectKey, actorSchema.parse(actor), mode);
     const project = await this.getProject(projectKey);
     for (let attempt = 0; attempt < 10; attempt++) {
       const plans = await this.listPlans(project.id, "READY");

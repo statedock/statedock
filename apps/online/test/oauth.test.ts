@@ -21,7 +21,8 @@ test("OAuth 2.1 RFC 8414 and RFC 9728 discovery metadata", async () => {
     DB: f.db,
     ATTACHMENTS: f.bucket,
     OAUTH_KV: f.oauthKv,
-    APP_ENV: "test", PUBLIC_BASE_URL:"https://dock.example.test",
+    APP_ENV: "test",
+    PUBLIC_BASE_URL: "https://dock.example.test",
     ASSETS: { fetch: async () => new Response("asset") },
   } as unknown as OnlineEnv;
 
@@ -32,10 +33,10 @@ test("OAuth 2.1 RFC 8414 and RFC 9728 discovery metadata", async () => {
     const resMeta = await handler.fetch(
       new Request("https://dock.example.test/.well-known/oauth-protected-resource/mcp"),
       env,
-      ctx
+      ctx,
     );
     assert.equal(resMeta.status, 200);
-    const resJson = await resMeta.json() as any;
+    const resJson = (await resMeta.json()) as any;
     assert.equal(resJson.resource, "https://dock.example.test/mcp");
     assert.deepEqual(resJson.authorization_servers, ["https://dock.example.test"]);
     assert.ok(resJson.scopes_supported.includes("mcp:read"));
@@ -44,10 +45,10 @@ test("OAuth 2.1 RFC 8414 and RFC 9728 discovery metadata", async () => {
     const asMeta = await handler.fetch(
       new Request("https://dock.example.test/.well-known/oauth-authorization-server"),
       env,
-      ctx
+      ctx,
     );
     assert.equal(asMeta.status, 200);
-    const asJson = await asMeta.json() as any;
+    const asJson = (await asMeta.json()) as any;
     assert.equal(asJson.issuer, "https://dock.example.test");
     assert.equal(asJson.authorization_endpoint, "https://dock.example.test/oauth/authorize");
     assert.equal(asJson.token_endpoint, "https://dock.example.test/oauth/token");
@@ -68,7 +69,8 @@ test("Unauthenticated MCP requests receive standard OAuth 401 challenge", async 
     DB: f.db,
     ATTACHMENTS: f.bucket,
     OAUTH_KV: f.oauthKv,
-    APP_ENV: "test", PUBLIC_BASE_URL:"https://dock.example.test",
+    APP_ENV: "test",
+    PUBLIC_BASE_URL: "https://dock.example.test",
     ASSETS: { fetch: async () => new Response("asset") },
   } as unknown as OnlineEnv;
   const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as any;
@@ -81,7 +83,7 @@ test("Unauthenticated MCP requests receive standard OAuth 401 challenge", async 
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(res.status, 401);
     const authHeader = res.headers.get("www-authenticate");
@@ -99,7 +101,8 @@ test("Legacy API Key clients continue to authenticate with read/write and tenant
     DB: f.db,
     ATTACHMENTS: f.bucket,
     OAUTH_KV: f.oauthKv,
-    APP_ENV: "test", PUBLIC_BASE_URL:"https://dock.example.test",
+    APP_ENV: "test",
+    PUBLIC_BASE_URL: "https://dock.example.test",
     ASSETS: { fetch: async () => new Response("asset") },
   } as unknown as OnlineEnv;
   const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as any;
@@ -114,9 +117,13 @@ test("Legacy API Key clients continue to authenticate with read/write and tenant
     });
 
     // Create a project for user 'one'
-    await f.client.execute("INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('proj-1', 'one', 'proj-one', 'Project One', 'now', 'now')");
+    await f.client.execute(
+      "INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('proj-1', 'one', 'proj-one', 'Project One', 'now', 'now')",
+    );
     // Create a project for user 'two'
-    await f.client.execute("INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('proj-2', 'two', 'proj-two', 'Project Two', 'now', 'now')");
+    await f.client.execute(
+      "INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('proj-2', 'two', 'proj-two', 'Project Two', 'now', 'now')",
+    );
 
     // Call list_projects with User One's API key
     const listRes = await handler.fetch(
@@ -134,10 +141,10 @@ test("Legacy API Key clients continue to authenticate with read/write and tenant
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(listRes.status, 200);
-    const listJson = await listRes.json() as any;
+    const listJson = (await listRes.json()) as any;
     const projects = JSON.parse(listJson.result.content[0].text).data;
     assert.equal(projects.length, 1);
     assert.equal(projects[0].slug, "proj-one");
@@ -161,10 +168,10 @@ test("Legacy API Key clients continue to authenticate with read/write and tenant
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(writeRes.status, 200);
-    const writeJson = await writeRes.json() as any;
+    const writeJson = (await writeRes.json()) as any;
     const plan = JSON.parse(writeJson.result.content[0].text).data;
     assert.equal(plan.title, "API Key Created Task");
     assert.equal(plan.status, "PLAN");
@@ -180,7 +187,7 @@ test("Legacy API Key clients continue to authenticate with read/write and tenant
         body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(invalidRes.status, 401);
   } finally {
@@ -194,7 +201,8 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
     DB: f.db,
     ATTACHMENTS: f.bucket,
     OAUTH_KV: f.oauthKv,
-    APP_ENV: "test", PUBLIC_BASE_URL:"https://dock.example.test",
+    APP_ENV: "test",
+    PUBLIC_BASE_URL: "https://dock.example.test",
     ASSETS: { fetch: async () => new Response("asset") },
   } as unknown as OnlineEnv;
   const ctx = { waitUntil: () => {}, passThroughOnException: () => {} } as any;
@@ -214,24 +222,25 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(regRes.status, 201);
-    const client = await regRes.json() as any;
+    const client = (await regRes.json()) as any;
     const clientId = client.client_id;
     assert.ok(clientId, "Client ID must be returned");
 
     // 2. PKCE parameters
-    const codeVerifier = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~verylongverifier";
+    const codeVerifier =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~verylongverifier";
     const codeChallenge = base64url(await sha256(codeVerifier));
 
     // 3. GET /oauth/authorize without user session -> returns login HTML
     const unauthAuthRes = await handler.fetch(
       new Request(
-        `https://dock.example.test/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=https://chatgpt.com/api/mcp/callback&scope=mcp:read%20mcp:write&code_challenge=${codeChallenge}&code_challenge_method=S256&state=xyz123`
+        `https://dock.example.test/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=https://chatgpt.com/api/mcp/callback&scope=mcp:read%20mcp:write&code_challenge=${codeChallenge}&code_challenge_method=S256&state=xyz123`,
       ),
       env,
-      ctx
+      ctx,
     );
     assert.equal(unauthAuthRes.status, 200);
     const unauthHtml = await unauthAuthRes.text();
@@ -252,10 +261,10 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         `https://dock.example.test/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=https://chatgpt.com/api/mcp/callback&scope=mcp:read%20mcp:write&code_challenge=${codeChallenge}&code_challenge_method=S256&state=xyz123`,
         {
           headers: { Cookie: sessionCookieHeader },
-        }
+        },
       ),
       env,
-      ctx
+      ctx,
     );
     assert.equal(authRes.status, 200);
     const consentHtml = await authRes.text();
@@ -270,7 +279,9 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
     const handle = handleMatch[1];
 
     // Grab consent cookie returned in Set-Cookie
-    const consentCookies = authRes.headers.getSetCookie?.() || [authRes.headers.get("set-cookie") || ""];
+    const consentCookies = authRes.headers.getSetCookie?.() || [
+      authRes.headers.get("set-cookie") || "",
+    ];
     const consentCookieStr = consentCookies.join("; ");
 
     // 6. Test User Deny -> 302 redirect with access_denied
@@ -286,7 +297,7 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: denyBody,
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(denyRes.status, 302);
     const denyLocation = new URL(denyRes.headers.get("location")!);
@@ -300,14 +311,16 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         `https://dock.example.test/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=https://chatgpt.com/api/mcp/callback&scope=mcp:read%20mcp:write&code_challenge=${codeChallenge}&code_challenge_method=S256&state=state-approve`,
         {
           headers: { Cookie: sessionCookieHeader },
-        }
+        },
       ),
       env,
-      ctx
+      ctx,
     );
     const consentHtml2 = await authRes2.text();
     const handle2 = /name="handle"\s+value="([^"]+)"/.exec(consentHtml2)![1];
-    const consentCookies2 = (authRes2.headers.getSetCookie?.() || [authRes2.headers.get("set-cookie") || ""]).join("; ");
+    const consentCookies2 = (
+      authRes2.headers.getSetCookie?.() || [authRes2.headers.get("set-cookie") || ""]
+    ).join("; ");
 
     // Approve with both mcp:read and mcp:write
     const approveBody = new FormData();
@@ -325,7 +338,7 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: approveBody,
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(approveRes.status, 302);
     const approveLocation = new URL(approveRes.headers.get("location")!);
@@ -349,10 +362,10 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: tokenParams.toString(),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(tokenRes.status, 200);
-    const tokenData = await tokenRes.json() as any;
+    const tokenData = (await tokenRes.json()) as any;
     assert.ok(tokenData.access_token, "access_token must be present");
     assert.ok(tokenData.refresh_token, "refresh_token must be present");
     assert.equal(tokenData.token_type, "bearer");
@@ -371,16 +384,18 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: JSON.stringify({ jsonrpc: "2.0", id: 10, method: "tools/list", params: {} }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(toolsRes.status, 200);
-    const toolsJson = await toolsRes.json() as any;
+    const toolsJson = (await toolsRes.json()) as any;
     const createPlanTool = toolsJson.result.tools.find((t: any) => t.name === "create_plan");
     assert.ok(createPlanTool);
     assert.deepEqual(createPlanTool.securitySchemes, [{ type: "oauth2", scopes: ["mcp:write"] }]);
 
     // 10. ChatGPT creates Planned Task in StateDock!
-    await f.client.execute("INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('p-oauth', 'one', 'statedock', 'StateDock', 'now', 'now')");
+    await f.client.execute(
+      "INSERT INTO projects(id, owner_id, slug, name, created_at, updated_at) VALUES('p-oauth', 'one', 'statedock', 'StateDock', 'now', 'now')",
+    );
 
     const createPlanRes = await handler.fetch(
       new Request("https://dock.example.test/mcp", {
@@ -405,10 +420,10 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(createPlanRes.status, 200);
-    const createPlanJson = await createPlanRes.json() as any;
+    const createPlanJson = (await createPlanRes.json()) as any;
     const planResult = JSON.parse(createPlanJson.result.content[0].text).data;
     assert.equal(planResult.title, "OAuth 测试方案");
     assert.equal(planResult.status, "PLAN");
@@ -428,14 +443,16 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         `https://dock.example.test/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=https://chatgpt.com/api/mcp/callback&scope=mcp:read&code_challenge=${codeChallenge}&code_challenge_method=S256&state=state-read-only`,
         {
           headers: { Cookie: sessionCookieHeader },
-        }
+        },
       ),
       env,
-      ctx
+      ctx,
     );
     const consentHtml3 = await authRes3.text();
     const handle3 = /name="handle"\s+value="([^"]+)"/.exec(consentHtml3)![1];
-    const consentCookies3 = (authRes3.headers.getSetCookie?.() || [authRes3.headers.get("set-cookie") || ""]).join("; ");
+    const consentCookies3 = (
+      authRes3.headers.getSetCookie?.() || [authRes3.headers.get("set-cookie") || ""]
+    ).join("; ");
 
     const approveReadOnlyBody = new FormData();
     approveReadOnlyBody.set("handle", handle3);
@@ -451,9 +468,11 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: approveReadOnlyBody,
       }),
       env,
-      ctx
+      ctx,
     );
-    const codeReadOnly = new URL(approveReadOnlyRes.headers.get("location")!).searchParams.get("code")!;
+    const codeReadOnly = new URL(approveReadOnlyRes.headers.get("location")!).searchParams.get(
+      "code",
+    )!;
 
     const tokenReadOnlyRes = await handler.fetch(
       new Request("https://dock.example.test/oauth/token", {
@@ -468,9 +487,9 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }).toString(),
       }),
       env,
-      ctx
+      ctx,
     );
-    const tokenReadOnlyData = (await tokenReadOnlyRes.json() as any);
+    const tokenReadOnlyData = (await tokenReadOnlyRes.json()) as any;
     const tokenReadOnly = tokenReadOnlyData.access_token;
 
     // Read tool succeeds with read-only token
@@ -489,16 +508,29 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(readOnlyListRes.status, 200);
 
-    const identityResponse = await handler.fetch(new Request("https://dock.example.test/mcp", {
-      method: "POST", headers: {"Content-Type":"application/json", Authorization:`Bearer ${tokenReadOnly}`},
-      body: JSON.stringify({jsonrpc:"2.0",id:22,method:"tools/call",params:{name:"get_instance_info",arguments:{}}}),
-    }), env, ctx);
-    assert.equal(identityResponse.status,200);
-    assert.equal((await identityResponse.json() as any).result.structuredContent.data.publicOrigin,"https://dock.example.test");
+    const identityResponse = await handler.fetch(
+      new Request("https://dock.example.test/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenReadOnly}` },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 22,
+          method: "tools/call",
+          params: { name: "get_instance_info", arguments: {} },
+        }),
+      }),
+      env,
+      ctx,
+    );
+    assert.equal(identityResponse.status, 200);
+    assert.equal(
+      ((await identityResponse.json()) as any).result.structuredContent.data.publicOrigin,
+      "https://dock.example.test",
+    );
 
     // Write tool is rejected with 403 insufficient_scope
     const readOnlyWriteRes = await handler.fetch(
@@ -519,7 +551,7 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(readOnlyWriteRes.status, 403);
     const writeAuthHeader = readOnlyWriteRes.headers.get("www-authenticate");
@@ -528,7 +560,7 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
     assert.match(writeAuthHeader, /mcp:write/);
 
     // 12. Test Refresh Token:
-    // a. Old refresh token from superseded grant is revoked:
+    // a. Independent authorization retains the previous grant:
     const oldRefreshRes = await handler.fetch(
       new Request("https://dock.example.test/oauth/token", {
         method: "POST",
@@ -540,9 +572,9 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }).toString(),
       }),
       env,
-      ctx
+      ctx,
     );
-    assert.equal(oldRefreshRes.status, 400);
+    assert.equal(oldRefreshRes.status, 200);
 
     // b. Active refresh token succeeds:
     const refreshRes = await handler.fetch(
@@ -556,10 +588,10 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         }).toString(),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(refreshRes.status, 200);
-    const refreshedData = await refreshRes.json() as any;
+    const refreshedData = (await refreshRes.json()) as any;
     assert.ok(refreshedData.access_token);
     assert.notEqual(refreshedData.access_token, tokenReadOnly);
 
@@ -574,20 +606,36 @@ test("OAuth 2.1 Authorization Code + PKCE flow, Scope separation, and Planned Ta
         body: JSON.stringify({ jsonrpc: "2.0", id: 30, method: "tools/list", params: {} }),
       }),
       env,
-      ctx
+      ctx,
     );
     assert.equal(bogusRes.status, 401);
-    const oldRequest=()=>handler.fetch(new Request("https://dock.example.test/mcp",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${refreshedData.access_token}`},body:JSON.stringify({jsonrpc:"2.0",id:90,method:"tools/list"})}),env,ctx);
-    assert.equal((await oldRequest()).status,200);
+    const oldRequest = () =>
+      handler.fetch(
+        new Request("https://dock.example.test/mcp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${refreshedData.access_token}`,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 90, method: "tools/list" }),
+        }),
+        env,
+        ctx,
+      );
+    assert.equal((await oldRequest()).status, 200);
     await f.client.execute("UPDATE users SET instance_approved_at=NULL WHERE id='one'");
-    assert.equal((await oldRequest()).status,401);
+    assert.equal((await oldRequest()).status, 401);
     await f.client.execute("UPDATE users SET instance_approved_at='now' WHERE id='one'");
-    assert.equal((await oldRequest()).status,200);
-    await initializeAdministrator({...env,OWNER_EMAIL:"two@example.test"},"two","two@example.test");
-    assert.equal(await setUserDisabled(f.db,"two","one",true),true);
-    assert.equal((await oldRequest()).status,401);
-    assert.equal(await setUserDisabled(f.db,"two","one",false),true);
-    assert.equal((await oldRequest()).status,401);
+    assert.equal((await oldRequest()).status, 200);
+    await initializeAdministrator(
+      { ...env, OWNER_EMAIL: "two@example.test" },
+      "two",
+      "two@example.test",
+    );
+    assert.equal(await setUserDisabled(f.db, "two", "one", true), true);
+    assert.equal((await oldRequest()).status, 401);
+    assert.equal(await setUserDisabled(f.db, "two", "one", false), true);
+    assert.equal((await oldRequest()).status, 401);
   } finally {
     f.client.close();
   }

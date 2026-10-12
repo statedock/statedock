@@ -66,6 +66,8 @@ export class RepositoryContext {
       body: row.body,
       summary: row.summary ?? null,
       status: row.status,
+      assignedAgentId: row.assigned_agent_id ?? null,
+      claimedAgentId: row.claimed_agent_id ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

@@ -148,6 +148,13 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
                     {getStatusLabel(plan.status)}
                   </Badge>
                 </div>
+                {(plan.status === "READY" || plan.assignedAgentId) && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {lang === "zh" ? "分配：" : "Assigned: "}
+                    {model.agents.find((a) => a.id === plan.assignedAgentId)?.name ??
+                      (plan.assignedAgentId || (lang === "zh" ? "未分配" : "Unassigned"))}
+                  </p>
+                )}
                 {/* Summary / Body snippet */}
                 <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
                   {plan.summary || plan.body.split("\n").find((l) => l.trim()) || pI18n.noDetail}

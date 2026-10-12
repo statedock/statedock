@@ -7,6 +7,7 @@ export const actorSchema = z.object({
   id: z.string().min(1).max(200),
   type: z.enum(["human", "agent", "system"]).default("human"),
   name: z.string().max(200).optional(),
+  agentId: z.string().min(1).max(200).optional(),
 });
 export type Actor = z.infer<typeof actorSchema>;
 
@@ -45,6 +46,7 @@ export const updatePlanSchema = z
     summary: z.string().max(1000).nullable().optional(),
     status: z.enum(planStatuses).optional(),
     expectedUpdatedAt: z.string().optional(),
+    assignedAgentId: z.string().min(1).max(200).nullable().optional(),
   })
   .refine(
     (v) => Object.keys(v).some((k) => k !== "expectedUpdatedAt"),
@@ -90,6 +92,8 @@ export interface Plan {
   body: string;
   summary: string | null;
   status: PlanStatus;
+  assignedAgentId?: string | null;
+  claimedAgentId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -214,3 +218,10 @@ export function formatTaskLabel(task: {
 }): string {
   return `${formatTaskId(task)} · ${task.title}`;
 }
+
+export {
+  readyQueuePredicate,
+  readyQueueClaim,
+  type QueuePrincipal,
+  type ReadyQueueMode,
+} from "./agent-queue.js";

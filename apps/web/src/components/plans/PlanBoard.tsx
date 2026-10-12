@@ -141,6 +141,22 @@ export function PlanBoard({
           })}
         </div>
 
+        <label className="text-xs">
+          <span className="sr-only">{lang === "zh" ? "按身份筛选" : "Filter by identity"}</span>
+          <select
+            value={model.agentFilter}
+            onChange={(e) => model.setAgentFilter(e.target.value)}
+            className="h-8 max-w-full rounded-md border border-input bg-background px-2 text-xs"
+          >
+            <option value="ALL">{lang === "zh" ? "全部身份" : "All identities"}</option>
+            <option value="UNASSIGNED">{lang === "zh" ? "未分配" : "Unassigned"}</option>
+            {model.agents.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
         {/* Search and Sort */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 md:w-60">

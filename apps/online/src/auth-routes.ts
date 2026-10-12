@@ -1,3 +1,4 @@
+import agentRoutes from "./agent-routes.js";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -22,6 +23,7 @@ const emailSchema = z
   .transform((v) => v.trim().toLowerCase());
 
 const app = new Hono<{ Bindings: OnlineEnv }>();
+app.route("/", agentRoutes);
 app.use("/api/auth/*", async (c, next) => {
   c.header("Cache-Control", "no-store");
   await next();
@@ -158,7 +160,7 @@ app.get("/api/auth/mcp-clients", async (c) => {
   const s = await currentSession(c);
   if (!s) return jsonError("unauthorized", 401);
   const rows = await c.env.DB.prepare(
-    "SELECT id,name,token_prefix,last_used_at,expires_at,created_at FROM mcp_clients WHERE user_id=? AND revoked_at IS NULL ORDER BY created_at DESC",
+    "SELECT id,name,agent_id,token_prefix,last_used_at,expires_at,created_at FROM mcp_clients WHERE user_id=? AND revoked_at IS NULL ORDER BY created_at DESC",
   )
     .bind(s.id)
     .all();
@@ -169,19 +171,58 @@ app.post("/api/auth/mcp-clients", async (c) => {
   const s = await currentSession(c);
   if (!s) return jsonError("unauthorized", 401);
   const parsed = z
-    .object({ name: z.string().min(1).max(100) })
+    .object({
+      name: z.string().min(1).max(100),
+      agentId: z.string().min(1).max(200).nullable().optional(),
+    })
     .safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "validation_error" }, 400);
+  const agentId = parsed.data.agentId ?? null;
+  if (
+    agentId &&
+    !(await c.env.DB.prepare(
+      "SELECT id FROM agent_profiles WHERE id=? AND user_id=? AND deleted_at IS NULL",
+    )
+      .bind(agentId, s.id)
+      .first())
+  )
+    return jsonError("invalid_agent", 400);
   const token = `sdm_${randomToken(32)}`,
     id = crypto.randomUUID(),
     prefix = token.slice(0, 12),
     at = new Date().toISOString();
   await c.env.DB.prepare(
-    "INSERT INTO mcp_clients(id,user_id,name,token_hash,token_prefix,created_at) VALUES(?,?,?,?,?,?)",
+    "INSERT INTO mcp_clients(id,user_id,name,token_hash,token_prefix,created_at,agent_id) VALUES(?,?,?,?,?,?,?)",
   )
-    .bind(id, s.id, parsed.data.name, await digest(token), prefix, at)
+    .bind(id, s.id, parsed.data.name, await digest(token), prefix, at, agentId)
     .run();
   return c.json({ data: { id, name: parsed.data.name, token, createdAt: at } }, 201);
+});
+
+app.patch("/api/auth/mcp-clients/:id", async (c) => {
+  if (!sameOrigin(c.req.raw)) return jsonError("origin_not_allowed", 403);
+  const session = await currentSession(c);
+  if (!session) return jsonError("unauthorized", 401);
+  const parsed = z
+    .object({ agentId: z.string().min(1).max(200).nullable() })
+    .safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return jsonError("validation_error", 400);
+  if (
+    parsed.data.agentId &&
+    !(await c.env.DB.prepare(
+      "SELECT id FROM agent_profiles WHERE id=? AND user_id=? AND deleted_at IS NULL",
+    )
+      .bind(parsed.data.agentId, session.id)
+      .first())
+  )
+    return jsonError("invalid_agent", 400);
+  const result = await c.env.DB.prepare(
+    "UPDATE mcp_clients SET agent_id=? WHERE id=? AND user_id=? AND revoked_at IS NULL",
+  )
+    .bind(parsed.data.agentId, c.req.param("id"), session.id)
+    .run();
+  if (!result.meta.changes) return jsonError("not_found", 404);
+  return c.json({ data: { agentId: parsed.data.agentId } });
 });
 
 app.delete("/api/auth/mcp-clients/:id", async (c) => {

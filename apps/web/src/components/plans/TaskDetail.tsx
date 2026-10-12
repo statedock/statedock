@@ -264,6 +264,46 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <label htmlFor="assigned-agent" className="text-xs font-semibold">
+              {lang === "zh" ? "分配身份" : "Assigned Identity"}
+            </label>
+            <select
+              id="assigned-agent"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={model.assignedAgentId ?? ""}
+              disabled={saving || (selectedPlan.status === "WORKING" && status !== "READY")}
+              onChange={(e) => {
+                model.setAssignedAgentId(e.target.value || null);
+                setDirty(true);
+              }}
+            >
+              <option value="">{lang === "zh" ? "未分配" : "Unassigned"}</option>
+              {model.assignedAgentId &&
+                !model.agents.some((a) => a.id === model.assignedAgentId) && (
+                  <option value={model.assignedAgentId}>{model.assignedAgentId}</option>
+                )}
+              {model.agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            {model.agentsError && <p className="text-xs text-rose-500">{model.agentsError}</p>}
+            <p className="text-xs text-muted-foreground">
+              {lang === "zh"
+                ? "在 MCP 凭据设置中添加身份。正在执行的任务需先退回 Ready，再改派并保存。"
+                : "Add identities in MCP credentials. Return a working task to Ready before transferring and saving."}
+            </p>
+            {selectedPlan.claimedAgentId && (
+              <p className="text-xs text-muted-foreground">
+                {lang === "zh" ? "领取身份：" : "Claimed identity: "}
+                {model.agents.find((a) => a.id === selectedPlan.claimedAgentId)?.name ??
+                  selectedPlan.claimedAgentId}
+              </p>
+            )}
+          </div>
+
           {/* Discussion & Decisions (body) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">

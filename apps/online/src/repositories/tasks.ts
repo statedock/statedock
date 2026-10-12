@@ -1,5 +1,8 @@
 import {
   ConflictError,
+  readyQueueClaim,
+  readyQueuePredicate,
+  type ReadyQueueMode,
   createPlanSchema,
   NotFoundError,
   updatePlanSchema,
@@ -12,6 +15,84 @@ import type { PlanRow } from "./rows.js";
 const now = () => new Date().toISOString();
 const id = () => crypto.randomUUID();
 export class TaskRepository extends ProjectRepository {
+  private async queuePrincipal(actor: Actor) {
+    if (actor.type !== "agent" || !actor.agentId)
+      throw new ConflictError(
+        "请先在 MCP 凭据设置中绑定 Agent；旧 OAuth 连接需重新授权。Bind this credential to an Agent profile first.",
+      );
+    const profile = await this.db
+      .prepare("SELECT id FROM agent_profiles WHERE id=? AND user_id=? AND deleted_at IS NULL")
+      .bind(actor.agentId, this.ownerId)
+      .first();
+    if (!profile) throw new ConflictError("Agent profile is not available for this account");
+    return { userId: this.ownerId, agentId: actor.agentId };
+  }
+  async listReadyTasks(key: string, actor: Actor, mode: ReadyQueueMode = "mine"): Promise<Plan[]> {
+    const pid = await this.projectId(key);
+    const principal = await this.queuePrincipal(actor);
+    const predicate = readyQueuePredicate(principal, mode);
+    const rows = await this.db
+      .prepare(`SELECT * FROM plans WHERE project_id=? AND ${predicate.sql} ORDER BY number`)
+      .bind(pid, ...predicate.bindings)
+      .all<PlanRow>();
+    return rows.results.map((row) => this.plan(row));
+  }
+  async claimReadyTask(
+    key: string,
+    actor: Actor,
+    mode: ReadyQueueMode = "mine",
+  ): Promise<Plan | null> {
+    const pid = await this.projectId(key);
+    const principal = await this.queuePrincipal(actor);
+    const at = now();
+    const claimId = id();
+    const query = readyQueueClaim(pid, principal, at, mode, claimId);
+    const [result] = await this.db.batch([
+      this.db.prepare(query.sql).bind(...query.bindings),
+      this.db
+        .prepare(
+          "INSERT INTO activities(id,project_id,actor_id,actor_type,actor_name,action,subject_type,subject_id,details,created_at) SELECT ?,project_id,?,?,?,'plan.claimed','plan',id,?,? FROM plans WHERE project_id=? AND claimed_agent_id=? AND claim_id=? AND changes()=1",
+        )
+        .bind(
+          id(),
+          actor.id,
+          actor.type,
+          actor.name ?? null,
+          JSON.stringify({ mode, agentId: actor.agentId }),
+          at,
+          pid,
+          actor.agentId!,
+          claimId,
+        ),
+    ]);
+    const row = result.results[0] as PlanRow | undefined;
+    if (!row) return null;
+    const plan = this.plan(row);
+    if (this.onPlanEvent) {
+      try {
+        await this.onPlanEvent({
+          projectId: pid,
+          number: plan.number,
+          reference: plan.reference,
+          title: plan.title,
+          kind: "started",
+        });
+      } catch (error) {
+        console.error("onPlanEvent error:", error);
+      }
+    }
+    return plan;
+  }
+  private async requireAssigneeAccess(pid: string, agentId: string) {
+    const row = await this.db
+      .prepare(
+        "SELECT a.id FROM agent_profiles a WHERE a.id=? AND a.deleted_at IS NULL AND EXISTS(SELECT 1 FROM projects p WHERE p.id=? AND (p.owner_id=a.user_id OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=a.user_id)))",
+      )
+      .bind(agentId, pid)
+      .first();
+    if (!row) throw new ConflictError("Assigned Agent must belong to a project member");
+  }
+
   async listPlans(key: string, status?: PlanStatus): Promise<Plan[]> {
     const pid = await this.projectId(key);
     const rows = await this.db
@@ -117,11 +198,37 @@ export class TaskRepository extends ProjectRepository {
     const existing = await this.getPlan(pid, number);
     if (input.expectedUpdatedAt && input.expectedUpdatedAt !== existing.updatedAt)
       throw new ConflictError("Task 已被其他人或 agent 更新，请重新读取后再保存。");
+    if (input.assignedAgentId !== undefined && input.assignedAgentId !== existing.assignedAgentId) {
+      if (actor.type !== "human")
+        throw new ConflictError("Only a human can assign or transfer tasks");
+      if (existing.status === "WORKING" && input.status !== "READY")
+        throw new ConflictError(
+          "请先显式退回 Ready 再交接；不能转移正在执行的任务。Return this task to Ready explicitly before transferring it.",
+        );
+      if (input.assignedAgentId) await this.requireAssigneeAccess(pid, input.assignedAgentId);
+    }
+    if (
+      actor.type === "agent" &&
+      existing.assignedAgentId &&
+      actor.agentId !== existing.assignedAgentId
+    )
+      throw new ConflictError(
+        "This task belongs to another Agent; request an explicit human handoff",
+      );
+    if (
+      actor.type === "agent" &&
+      existing.claimedAgentId &&
+      actor.agentId !== existing.claimedAgentId
+    )
+      throw new ConflictError("This task is being executed by another Agent");
     const changes = Object.entries({
       title: input.title,
       body: input.body,
       summary: input.summary,
       status: input.status,
+      assignedAgentId: input.assignedAgentId,
+      claimedAgentId: input.status === "READY" ? null : undefined,
+      claimId: input.status === "READY" ? null : undefined,
     }).filter(([, v]) => v !== undefined);
     if (changes.length) {
       const columns: Record<string, string> = {
@@ -129,6 +236,9 @@ export class TaskRepository extends ProjectRepository {
         body: "body",
         summary: "summary",
         status: "status",
+        assignedAgentId: "assigned_agent_id",
+        claimedAgentId: "claimed_agent_id",
+        claimId: "claim_id",
       };
       const sets = changes.map(([k]) => `${columns[k]}=?`);
       const values = changes.map(([, v]) => v);
@@ -190,6 +300,8 @@ export class TaskRepository extends ProjectRepository {
   async movePlan(plan: Plan, targetProjectKey: string, actor: Actor): Promise<Plan> {
     const targetPid = await this.projectId(targetProjectKey);
     if (plan.projectId === targetPid) return plan;
+    if (plan.assignedAgentId) await this.requireAssigneeAccess(targetPid, plan.assignedAgentId);
+    if (plan.claimedAgentId) await this.requireAssigneeAccess(targetPid, plan.claimedAgentId);
     const targetProject = await this.getProject(targetPid);
     const sourceProject = await this.getProject(plan.projectId);
     const at = new Date(Math.max(Date.now(), Date.parse(plan.updatedAt) + 1)).toISOString();

@@ -6,6 +6,7 @@ export type TaskSaveInput = {
   body: string;
   summary: string | null;
   status: PlanStatus;
+  assignedAgentId?: string | null;
   expectedUpdatedAt: string;
 };
 export function useTaskDraft(
@@ -18,6 +19,7 @@ export function useTaskDraft(
   const [body, setBody] = useState("");
   const [summary, setSummary] = useState("");
   const [status, setStatus] = useState<PlanStatus>("PLAN");
+  const [assignedAgentId, setAssignedAgentId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [baseline, setBaseline] = useState("");
 
@@ -35,6 +37,7 @@ export function useTaskDraft(
         setBody(selectedPlan.body || "");
         setSummary(selectedPlan.summary || "");
         setStatus(selectedPlan.status);
+        setAssignedAgentId(selectedPlan.assignedAgentId ?? null);
         setBaseline(selectedPlan.updatedAt);
       }
     } else {
@@ -48,6 +51,7 @@ export function useTaskDraft(
     setBody(selectedPlan.body || "");
     setSummary(selectedPlan.summary || "");
     setStatus(selectedPlan.status);
+    setAssignedAgentId(selectedPlan.assignedAgentId ?? null);
     setBaseline(selectedPlan.updatedAt);
     setDirty(false);
   };
@@ -59,6 +63,7 @@ export function useTaskDraft(
       body: body.trim(),
       summary: summary.trim() ? summary.trim() : null,
       status,
+      ...(assignedAgentId !== (selectedPlan.assignedAgentId ?? null) ? { assignedAgentId } : {}),
       expectedUpdatedAt: baseline,
     });
     if (saved !== false) setDirty(false);
@@ -78,6 +83,8 @@ export function useTaskDraft(
     setSummary,
     status,
     setStatus,
+    assignedAgentId,
+    setAssignedAgentId,
     dirty,
     setDirty,
     baseline,

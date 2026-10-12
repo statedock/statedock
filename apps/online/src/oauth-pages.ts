@@ -260,6 +260,7 @@ export function renderLoginPage(oauthUrl: string): string {
 }
 
 export function renderConsentPage(params: {
+  agents?: { id: string; name: string }[];
   details: ConsentDescription;
   handle: string;
   userEmail: string;
@@ -463,6 +464,12 @@ export function renderConsentPage(params: {
     <form method="post" action="${escapeHtml(oauthUrl)}">
       <input type="hidden" name="handle" value="${escapeHtml(handle)}">
       <div class="section-title">权限范围</div>
+      <label for="agentId">绑定身份 / Identity</label>
+      <select id="agentId" name="agentId" style="width:100%;padding:10px;margin:10px 0">
+        <option value="">暂不绑定 / Unbound</option>
+        ${(params.agents ?? []).map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`).join("")}
+      </select>
+      <p>只执行我的 Ready 任务需先绑定身份。可在 StateDock 的 MCP 凭据设置中添加身份，再重新授权。未绑定时仍可管理普通任务。</p>
       <div class="scopes-list">
         ${scopesHtml}
       </div>

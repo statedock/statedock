@@ -15,7 +15,12 @@ app.all("/mcp", async (c) => {
   if (!bearer) return jsonError("unauthorized", 401);
   const row = await authenticateMcpClient(c.env.DB, bearer);
   if (!row) return jsonError("invalid_client_token", 401);
-  const actor = actorSchema.parse({ id: `mcp:${row.id}`, type: "agent", name: row.name });
+  const actor = actorSchema.parse({
+    id: row.agent_id ? `agent:${row.agent_id}` : `mcp:${row.id}`,
+    type: "agent",
+    name: row.name,
+    agentId: row.agent_id ?? undefined,
+  });
   const repo = notificationRepository(c.env, row.user_id);
   return handleMcpRequest(
     new StateDockService(repo),

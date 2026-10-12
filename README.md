@@ -42,3 +42,7 @@ StateDock is licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE). Third-par
 Deployment depends on your Cloudflare resources, email delivery and external client configuration. See the validation guide for checks to run on your own instance.
 
 Built-in Web Push delivers task notifications to enabled mobile and desktop devices while the PWA is closed. Configure persistent VAPID secrets once; see [Web Push setup](docs/self-hosting.md#built-in-web-push). Existing external notification channels remain optional.
+
+### Agent Identities and Ready queues
+
+Assign Ready tasks to logical identities and bind MCP tokens or OAuth connections to them. Agents claim only their own assigned queue by default; unassigned work needs explicit authorization. Multiple connections may share one identity. See [identity setup and queue execution](docs/agent-setup.md#agent-identities-and-assigned-ready-tasks) and [upgrade migrations](docs/migrations.md).
