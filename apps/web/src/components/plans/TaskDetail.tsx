@@ -1,3 +1,4 @@
+import { CompletedBy } from "../../CompletedBy";
 import { statusAppearance } from "./status-appearance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -223,6 +224,8 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
               className="text-sm font-medium"
             />
           </div>
+
+          <CompletedBy plan={selectedPlan} details />
 
           {/* Status selector */}
           <div className="space-y-1.5">

@@ -1,3 +1,4 @@
+import { CompletedBy } from "../../CompletedBy";
 import { statusAppearance } from "./status-appearance";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,6 +144,7 @@ export function TaskList({ model }: { model: ReturnType<typeof usePlanBoard> }) 
                       (plan.assignedAgentId || (lang === "zh" ? "未分配" : "Unassigned"))}
                   </p>
                 )}
+                <CompletedBy plan={plan} />
                 {/* Summary / Body snippet */}
                 <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
                   {plan.summary || plan.body.split("\n").find((l) => l.trim()) || pI18n.noDetail}

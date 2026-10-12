@@ -94,6 +94,8 @@ export interface Plan {
   status: PlanStatus;
   assignedAgentId?: string | null;
   claimedAgentId?: string | null;
+  completedBy?: Actor | null;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

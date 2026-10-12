@@ -93,6 +93,51 @@ export class TaskRepository extends ProjectRepository {
     if (!row) throw new ConflictError("Assigned Agent must belong to a project member");
   }
 
+  /** Completion is the latest explicit DONE write, never inferred from assignment/claim. */
+  private async withCompletion(plans: Plan[]): Promise<Plan[]> {
+    if (!plans.some((p) => p.status === "DONE")) return plans;
+    const rows = await this.db
+      .prepare(
+        `SELECT a.subject_id,a.actor_id,a.actor_type,COALESCE(ap.name,a.actor_name) AS actor_name,a.created_at
+       FROM activities a JOIN plans p ON p.id=a.subject_id
+       LEFT JOIN agent_profiles ap ON a.actor_type='agent' AND a.actor_id='agent:'||ap.id
+       WHERE p.project_id=? AND p.status='DONE' AND a.subject_type='plan'
+       AND a.action IN ('plan.updated','plan.created')
+       AND CASE WHEN json_valid(a.details) THEN json_extract(a.details,'$.status') END='DONE'
+       AND CASE WHEN json_valid(a.details) THEN json_extract(a.details,'$.completionTransition') END IS NOT 0
+       ORDER BY a.created_at DESC,a.id DESC`,
+      )
+      .bind(plans[0].projectId)
+      .all<{
+        subject_id: string;
+        actor_id: string;
+        actor_type: Actor["type"];
+        actor_name: string | null;
+        created_at: string;
+      }>();
+    const latest = new Map<string, (typeof rows.results)[number]>();
+    for (const row of rows.results)
+      if (!latest.has(row.subject_id)) latest.set(row.subject_id, row);
+    return plans.map((plan) => {
+      if (plan.status !== "DONE") return plan;
+      const row = latest.get(plan.id);
+      return {
+        ...plan,
+        completedBy: row
+          ? {
+              id: row.actor_id,
+              type: row.actor_type,
+              ...(row.actor_name ? { name: row.actor_name } : {}),
+              ...(row.actor_type === "agent" && row.actor_id.startsWith("agent:")
+                ? { agentId: row.actor_id.slice(6) }
+                : {}),
+            }
+          : null,
+        completedAt: row?.created_at ?? null,
+      };
+    });
+  }
+
   async listPlans(key: string, status?: PlanStatus): Promise<Plan[]> {
     const pid = await this.projectId(key);
     const rows = await this.db
@@ -101,7 +146,7 @@ export class TaskRepository extends ProjectRepository {
       )
       .bind(...(status ? [pid, status] : [pid]))
       .all<PlanRow>();
-    return rows.results.map((r) => this.plan(r));
+    return this.withCompletion(rows.results.map((r) => this.plan(r)));
   }
   async getPlan(key: string, number: number): Promise<Plan> {
     const pid = await this.projectId(key);
@@ -110,7 +155,7 @@ export class TaskRepository extends ProjectRepository {
       .bind(pid, number)
       .first<PlanRow>();
     if (!r) throw new NotFoundError("Plan not found");
-    return this.plan(r);
+    return (await this.withCompletion([this.plan(r)]))[0];
   }
   protected async planBy(where: string, value: string | number): Promise<Plan> {
     const r = await this.db
@@ -120,7 +165,7 @@ export class TaskRepository extends ProjectRepository {
       .bind(this.ownerId, this.ownerId, value)
       .first<PlanRow>();
     if (!r) throw new NotFoundError("Plan not found");
-    return this.plan(r);
+    return (await this.withCompletion([this.plan(r)]))[0];
   }
   async getPlanById(planId: string): Promise<Plan> {
     return this.planBy("plans.id", planId);
@@ -155,9 +200,18 @@ export class TaskRepository extends ProjectRepository {
         ),
       this.db
         .prepare(
-          "INSERT INTO activities(id,project_id,actor_id,actor_type,actor_name,action,subject_type,subject_id,details,created_at) VALUES(?,?,?,?,?,'plan.created','plan',?,NULL,?)",
+          "INSERT INTO activities(id,project_id,actor_id,actor_type,actor_name,action,subject_type,subject_id,details,created_at) VALUES(?,?,?,?,?,'plan.created','plan',?,?,?)",
         )
-        .bind(id(), pid, actor.id, actor.type, actor.name ?? null, planId, at),
+        .bind(
+          id(),
+          pid,
+          actor.id,
+          actor.type,
+          actor.name ?? null,
+          planId,
+          JSON.stringify({ status: input.status }),
+          at,
+        ),
     ]);
     const plan = await this.getPlanById(planId);
     if (this.onPlanEvent) {
@@ -260,7 +314,10 @@ export class TaskRepository extends ProjectRepository {
             actor.type,
             actor.name ?? null,
             existing.id,
-            JSON.stringify(input),
+            JSON.stringify({
+              ...input,
+              completionTransition: input.status === "DONE" && existing.status !== "DONE",
+            }),
             at,
           ),
       ]);

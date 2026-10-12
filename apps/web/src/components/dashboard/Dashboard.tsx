@@ -1,3 +1,4 @@
+import { CompletedBy } from "../../CompletedBy";
 import { TaskQueueCard } from "./TaskQueueCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -310,6 +311,7 @@ export function Dashboard({
                       </time>
                     </div>
                     <h5 className="text-xs font-semibold text-foreground truncate">{plan.title}</h5>
+                    <CompletedBy plan={plan} />
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                       {plan.summary || d.defaultSummary}
                     </p>
