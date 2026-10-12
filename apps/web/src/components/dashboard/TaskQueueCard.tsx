@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { api } from "../../api";
 import { ReadyExecution } from "../../ReadyExecution";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +20,7 @@ export function TaskQueueCard({
   onPlan: (p: Plan) => void;
   onTab: (tab: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const d = t.app.dashboard;
   const s = t.app.statuses;
   const queue = plans
@@ -26,6 +28,41 @@ export function TaskQueueCard({
     .sort((a, b) =>
       status === "READY" ? a.number - b.number : b.updatedAt.localeCompare(a.updatedAt),
     );
+  const needsIdentityNames = status === "READY" && queue.some((p) => p.assignedAgentId);
+  const [identities, setIdentities] = useState<{
+    projectId: string;
+    state: "loading" | "ready" | "error";
+    rows: { id: string; name: string }[];
+  }>({ projectId: "", state: "loading", rows: [] });
+  useEffect(() => {
+    if (!needsIdentityNames) return;
+    let active = true;
+    const load = () => {
+      setIdentities({ projectId: project.id, state: "loading", rows: [] });
+      api<{ id: string; name: string }[]>(`/auth/agents?project=${encodeURIComponent(project.id)}`)
+        .then((rows) => {
+          if (active) setIdentities({ projectId: project.id, state: "ready", rows });
+        })
+        .catch(() => {
+          if (active) setIdentities({ projectId: project.id, state: "error", rows: [] });
+        });
+    };
+    load();
+    window.addEventListener("statedock:agents-changed", load);
+    return () => {
+      active = false;
+      window.removeEventListener("statedock:agents-changed", load);
+    };
+  }, [project.id, needsIdentityNames]);
+  const identityName = (plan: Plan) => {
+    if (!plan.assignedAgentId) return lang === "zh" ? "未分配" : "Unassigned";
+    if (identities.projectId !== project.id || identities.state === "loading")
+      return lang === "zh" ? "加载身份…" : "Loading identity…";
+    return (
+      identities.rows.find((a) => a.id === plan.assignedAgentId)?.name ??
+      (lang === "zh" ? "身份暂不可用" : "Identity unavailable")
+    );
+  };
   const visible = queue.slice(0, 5);
   const total = queue.length;
   return (
@@ -77,6 +114,12 @@ export function TaskQueueCard({
                       {s[status]}
                     </Badge>
                   </div>
+                  {status === "READY" && (
+                    <p className="text-xs font-medium text-foreground/80">
+                      {lang === "zh" ? "分配身份：" : "Assigned Identity: "}
+                      {identityName(plan)}
+                    </p>
+                  )}
                   <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
                     {plan.body.split("\n").find((line) => line.trim()) || d.noDiscussionBackground}
                   </p>
