@@ -25,7 +25,7 @@ const appearances: Record<
       "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 [.dark_&]:border-amber-700/60 [.dark_&]:bg-amber-950/40 [.dark_&]:text-amber-200 [.dark_&]:hover:bg-amber-900/50",
     selected:
       "ring-amber-500/50 [.dark_&]:ring-amber-300/50 border-amber-700 bg-amber-700 text-white hover:bg-amber-800 [.dark_&]:border-amber-400 [.dark_&]:bg-amber-400 [.dark_&]:text-amber-950 [.dark_&]:hover:bg-amber-300",
-    card: "bg-amber-50/60 [.dark_&]:bg-amber-950/25",
+    card: "bg-card",
     text: "text-amber-800 [.dark_&]:text-amber-200",
   },
   WAITING: {
@@ -41,7 +41,7 @@ const appearances: Record<
       "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 [.dark_&]:border-emerald-700/60 [.dark_&]:bg-emerald-950/40 [.dark_&]:text-emerald-200 [.dark_&]:hover:bg-emerald-900/50",
     selected:
       "ring-emerald-500/50 [.dark_&]:ring-emerald-300/50 border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800 [.dark_&]:border-emerald-400 [.dark_&]:bg-emerald-400 [.dark_&]:text-emerald-950 [.dark_&]:hover:bg-emerald-300",
-    card: "bg-emerald-50/60 [.dark_&]:bg-emerald-950/25",
+    card: "bg-card",
     text: "text-emerald-800 [.dark_&]:text-emerald-200",
   },
   DROPPED: {
@@ -49,7 +49,7 @@ const appearances: Record<
       "border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 [.dark_&]:border-zinc-700/60 [.dark_&]:bg-zinc-950/40 [.dark_&]:text-zinc-200 [.dark_&]:hover:bg-zinc-900/50",
     selected:
       "ring-zinc-500/50 [.dark_&]:ring-zinc-300/50 border-zinc-700 bg-zinc-700 text-white hover:bg-zinc-800 [.dark_&]:border-zinc-400 [.dark_&]:bg-zinc-400 [.dark_&]:text-zinc-950 [.dark_&]:hover:bg-zinc-300",
-    card: "bg-zinc-50/60 [.dark_&]:bg-zinc-950/25",
+    card: "bg-card",
     text: "text-zinc-800 [.dark_&]:text-zinc-200",
   },
 };

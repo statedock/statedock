@@ -1,5 +1,5 @@
-import { CompletedBy } from "../../CompletedBy";
 import { TaskQueueCard } from "./TaskQueueCard";
+import { TaskCard } from "../plans/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,18 +18,6 @@ import {
   Plus,
 } from "lucide-react";
 import React from "react";
-
-const statusBadgeVariant: Record<
-  PlanStatus,
-  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
-> = {
-  PLAN: "plan",
-  READY: "ready",
-  WORKING: "working",
-  WAITING: "waiting",
-  DONE: "done",
-  DROPPED: "dropped",
-};
 
 interface Props {
   project: Project;
@@ -56,8 +44,6 @@ export function Dashboard({
 }: Props) {
   const { t, lang } = useI18n();
   const d = t.app.dashboard;
-  const s = t.app.statuses;
-
   const formatDate = (value: string) =>
     new Date(value).toLocaleString(lang === "zh" ? "zh-CN" : "en-US", {
       month: "2-digit",
@@ -151,31 +137,7 @@ export function Dashboard({
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0">
             {waiting.map((plan) => (
-              <div
-                key={plan.id}
-                onClick={() => onPlan(plan)}
-                className="group flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-amber-500/30 bg-card p-3 transition-colors hover:border-amber-500/60 hover:bg-amber-500/10"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
-                      {project.slug}-{plan.number}
-                    </span>
-                    <h4 className="truncate text-xs sm:text-sm font-semibold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400">
-                      {plan.title}
-                    </h4>
-                    <Badge
-                      variant="waiting"
-                      className="ml-auto shrink-0 whitespace-nowrap text-[10px]"
-                    >
-                      {d.needsIntervention}
-                    </Badge>
-                  </div>
-                  <p className="line-clamp-2 text-xs text-foreground/80 leading-relaxed">
-                    {plan.body.split("\n").find((line) => line.trim()) || d.noBlockerDesc}
-                  </p>
-                </div>
-              </div>
+              <TaskCard key={plan.id} plan={plan} project={project} onOpen={onPlan} />
             ))}
           </CardContent>
         </Card>
@@ -214,33 +176,7 @@ export function Dashboard({
             <CardContent className="space-y-2.5 p-4 pt-0">
               {working.length ? (
                 working.map((plan) => (
-                  <div
-                    key={plan.id}
-                    onClick={() => onPlan(plan)}
-                    className="group flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border/50 bg-card p-3 transition-colors hover:border-blue-500/40 hover:bg-muted/40"
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-blue-500 whitespace-nowrap shrink-0">
-                          {project.slug}-{plan.number}
-                        </span>
-                        <h4 className="truncate text-xs sm:text-sm font-medium text-foreground group-hover:text-blue-500">
-                          {plan.title}
-                        </h4>
-                        <Badge
-                          variant="working"
-                          className="ml-auto shrink-0 whitespace-nowrap text-[10px]"
-                        >
-                          {s.WORKING}
-                        </Badge>
-                      </div>
-                      <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-                        {plan.summary ||
-                          plan.body.split("\n").find((line) => line.trim()) ||
-                          d.noDescription}
-                      </p>
-                    </div>
-                  </div>
+                  <TaskCard key={plan.id} plan={plan} project={project} onOpen={onPlan} />
                 ))
               ) : (
                 <div className="flex items-center justify-between rounded-lg border border-dashed border-border/70 bg-muted/20 px-3.5 py-2.5 text-xs text-muted-foreground">
@@ -297,25 +233,7 @@ export function Dashboard({
             <CardContent className="space-y-2.5 p-4 pt-0">
               {recentDone.length ? (
                 recentDone.map((plan) => (
-                  <div
-                    key={plan.id}
-                    onClick={() => onPlan(plan)}
-                    className="cursor-pointer space-y-1.5 rounded-lg border border-border/40 bg-card p-3 transition-colors hover:border-emerald-500/40 hover:bg-muted/30"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0">
-                        {project.slug}-{plan.number}
-                      </span>
-                      <time className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDate(plan.updatedAt)}
-                      </time>
-                    </div>
-                    <h5 className="text-xs font-semibold text-foreground truncate">{plan.title}</h5>
-                    <CompletedBy plan={plan} />
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {plan.summary || d.defaultSummary}
-                    </p>
-                  </div>
+                  <TaskCard key={plan.id} plan={plan} project={project} onOpen={onPlan} />
                 ))
               ) : (
                 <div className="py-6 text-center text-xs text-muted-foreground">{d.noDone}</div>

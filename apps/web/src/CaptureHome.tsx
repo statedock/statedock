@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { TaskCard } from "./components/plans/TaskCard";
 import { formatProjectName } from "@/lib/project";
 import type { Plan, Project } from "@statedock/core";
 import { useEffect, useState } from "react";
@@ -217,17 +218,13 @@ export function CaptureHome({
 
   function list(items: Plan[]) {
     return items.map((plan) => (
-      <button
+      <TaskCard
         key={plan.id}
-        onClick={() => onOpen(plan)}
-        className="w-full rounded-xl border border-border bg-card p-3 text-left"
-      >
-        <p className="text-xs text-muted-foreground">{plan.reference}</p>
-        <p className="text-sm font-medium">{plan.title}</p>
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-          {plan.status === "WAITING" ? plan.body : plan.summary}
-        </p>
-      </button>
+        plan={plan}
+        project={projects.find((item) => item.id === plan.projectId)}
+        taskRef={plan.reference}
+        onOpen={onOpen}
+      />
     ));
   }
 

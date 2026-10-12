@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/i18n/context";
 import { formatProjectName } from "@/lib/project";
 import type { Plan, PlanStatus, Project } from "@statedock/core";
+import { TaskCard } from "../plans/TaskCard";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -13,18 +14,6 @@ import {
   Layers,
   Sparkles,
 } from "lucide-react";
-
-const statusBadgeVariant: Record<
-  PlanStatus,
-  "plan" | "ready" | "working" | "waiting" | "done" | "dropped"
-> = {
-  PLAN: "plan",
-  READY: "ready",
-  WORKING: "working",
-  WAITING: "waiting",
-  DONE: "done",
-  DROPPED: "dropped",
-};
 
 export interface GlobalPlanItem {
   plan: Plan;
@@ -48,18 +37,9 @@ export function GlobalDashboard({
   onSelectPlan,
   onNewPlan,
 }: Props) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const gd = t.app.globalDashboard;
   const s = t.app.statuses;
-
-  const formatDate = (value: string) =>
-    new Date(value).toLocaleString(lang === "zh" ? "zh-CN" : "en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
   // 1. All currently active tasks across all projects (WORKING or WAITING)
   const activeItems = allPlans
     .filter((item) => item.plan.status === "WORKING" || item.plan.status === "WAITING")
@@ -188,63 +168,13 @@ export function GlobalDashboard({
                 <div className="py-8 text-center text-xs text-muted-foreground">{gd.syncing}</div>
               ) : activeItems.length > 0 ? (
                 activeItems.map(({ plan, project }) => (
-                  <div
+                  <TaskCard
                     key={plan.id}
-                    onClick={() => onSelectPlan(project.id, plan)}
-                    className="group flex cursor-pointer flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:border-blue-500/50 hover:bg-muted/40 hover:shadow-xs"
-                  >
-                    {/* Header: Project label + Task ID + Status badge */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {/* Project Badge */}
-                        <span className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 text-[11px] font-semibold text-foreground">
-                          <Folder className="h-3 w-3 text-blue-500" />
-                          <span className="truncate max-w-[120px]">
-                            {formatProjectName(project, t.app.nav.inbox)}
-                          </span>
-                        </span>
-
-                        {/* Task Natural ID */}
-                        <span className="font-mono text-xs font-bold text-blue-500 shrink-0">
-                          {project.slug}-{plan.number}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <time className="text-[10px] text-muted-foreground">
-                          {formatDate(plan.updatedAt)}
-                        </time>
-                        <Badge
-                          variant={statusBadgeVariant[plan.status]}
-                          className="text-[10px] py-0 font-medium"
-                        >
-                          {s[plan.status]}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Task Title */}
-                    <h4 className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-blue-500 transition-colors">
-                      {plan.title}
-                    </h4>
-
-                    {/* Task Description / Outcome snippet */}
-                    <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-                      {plan.summary ||
-                        plan.body.split("\n").find((line) => line.trim()) ||
-                        t.app.dashboard.noDescription}
-                    </p>
-
-                    {/* Footer action hint */}
-                    <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground border-t border-border/30">
-                      <span className="font-mono text-[10px] opacity-70">
-                        {project.localPath || project.slug}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5 text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                        {gd.enterBoard} <ChevronRight className="h-3 w-3" />
-                      </span>
-                    </div>
-                  </div>
+                    plan={plan}
+                    project={project}
+                    projectLabel={formatProjectName(project, t.app.nav.inbox)}
+                    onOpen={() => onSelectPlan(project.id, plan)}
+                  />
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
@@ -280,33 +210,13 @@ export function GlobalDashboard({
             <CardContent className="p-4 space-y-3">
               {recentDoneItems.length ? (
                 recentDoneItems.map(({ plan, project }) => (
-                  <div
+                  <TaskCard
                     key={plan.id}
-                    onClick={() => onSelectPlan(project.id, plan)}
-                    className="group cursor-pointer space-y-1.5 rounded-xl border border-border/50 bg-card p-3 transition-colors hover:border-emerald-500/40 hover:bg-muted/30"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="truncate text-[10px] font-semibold text-muted-foreground">
-                          {formatProjectName(project, t.app.nav.inbox)}
-                        </span>
-                        <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                          {project.slug}-{plan.number}
-                        </span>
-                      </div>
-                      <time className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                        {formatDate(plan.updatedAt)}
-                      </time>
-                    </div>
-
-                    <h5 className="text-xs font-semibold text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                      {plan.title}
-                    </h5>
-
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {plan.summary || t.app.dashboard.defaultSummary}
-                    </p>
-                  </div>
+                    plan={plan}
+                    project={project}
+                    projectLabel={formatProjectName(project, t.app.nav.inbox)}
+                    onOpen={() => onSelectPlan(project.id, plan)}
+                  />
                 ))
               ) : (
                 <div className="py-8 text-center text-xs text-muted-foreground">{gd.noDone}</div>
