@@ -29,6 +29,10 @@ const secretPatterns = [
   /\bgh[pousr]_[A-Za-z0-9]{30,}\b/,
 ];
 const exampleDomain = /(?:^|\.)(?:example\.(?:com|net|org|test)|test|invalid)$/i;
+// Reviewed upstream reference only; runtime endpoints and other files remain blocked.
+const reviewedReferenceUrls = new Map([
+  ["skills/statedock/SKILL.md", new Set(["https://statedock.dev/skill.md"])],
+]);
 
 export async function checkRelease(root) {
   const { stdout } = await run(
@@ -84,7 +88,10 @@ export async function checkRelease(root) {
           break;
         }
       }
-      if (/https?:\/\/(?:[a-z0-9-]+\.)*statedock\.dev\b/i.test(source))
+      const urlsToCheck = source.replace(/https?:\/\/[^\s<>"'`)\]}]+/gi, (url) =>
+        reviewedReferenceUrls.get(rel)?.has(url) ? "" : url,
+      );
+      if (/https?:\/\/(?:[a-z0-9-]+\.)*statedock\.dev\b/i.test(urlsToCheck))
         failures.push(`${rel}: official or operator instance URL in self-hosted release`);
     }
     if (

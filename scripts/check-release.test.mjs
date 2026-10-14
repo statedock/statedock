@@ -6,6 +6,43 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { checkRelease } from "./check-release.mjs";
 
+test("release scan permits the exact upstream Skill reference only in the reviewed Skill", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
+  try {
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const skillDir = path.join(root, "skills/statedock");
+    await mkdir(skillDir, { recursive: true });
+    const skill = path.join(skillDir, "SKILL.md");
+    const upstream = "https://" + "statedock" + ".dev/skill.md";
+    await writeFile(skill, `Upstream standard: <${upstream}>`);
+    assert.deepEqual(await checkRelease(root), []);
+    for (const url of [
+      upstream + "/other",
+      upstream + "?endpoint=mcp",
+      upstream.replace("https:", "http:"),
+      upstream.replace("/skill.md", "/mcp"),
+      upstream.replace("statedock", "app.statedock"),
+    ]) {
+      await writeFile(skill, `Upstream standard: <${upstream}>\nEndpoint: ${url}`);
+      assert.ok(
+        (await checkRelease(root)).some((f) => f.includes("instance URL")),
+        url,
+      );
+    }
+    await writeFile(skill, `Upstream standard: <${upstream}>`);
+    for (const rel of ["README.md", "runtime.ts", ".dev.vars.example"]) {
+      await writeFile(path.join(root, rel), upstream);
+      assert.ok(
+        (await checkRelease(root)).some((f) => f.startsWith(`${rel}:`)),
+        rel,
+      );
+      await rm(path.join(root, rel));
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("release scan ignores private local files but rejects force-tracked config and data", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "release-scan-"));
   try {
