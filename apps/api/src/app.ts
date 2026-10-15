@@ -4,6 +4,7 @@ import {
   createPlanSchema,
   createProjectSchema,
   fileSchema,
+  handoffSchema,
   NotFoundError,
   planCreationMessage,
   planStatuses,
@@ -143,13 +144,7 @@ export function createApp(service: StateDockService) {
     });
   });
   app.post("/api/plans/:reference/handoff", async (c) => {
-    const body = z
-      .object({
-        changes: z.string().min(1),
-        verification: z.string().optional(),
-        nextSteps: z.string().optional(),
-      })
-      .parse(await c.req.json());
+    const body = handoffSchema.parse(await c.req.json());
     return c.json({
       data: await service.submitHandoff(
         { reference: c.req.param("reference") },

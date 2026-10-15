@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { codeReferenceSchema } from "@statedock/core";
 import { type OnlineEnv, currentSession } from "./auth.js";
 import { jsonError, sameOrigin } from "./http.js";
 
@@ -46,6 +47,19 @@ app.post("/api/auth/import-local", async (c) => {
             title: z.string().min(1).max(300),
             body: z.string().max(1_000_000),
             summary: z.string().max(1000).nullable().optional(),
+            code_reference: z
+              .string()
+              .max(4096)
+              .nullable()
+              .optional()
+              .superRefine((value, ctx) => {
+                if (value == null) return;
+                try {
+                  codeReferenceSchema.parse(JSON.parse(value));
+                } catch {
+                  ctx.addIssue({ code: "custom", message: "Invalid code reference" });
+                }
+              }),
             status: z.enum(["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"]),
             created_at: dateString,
             updated_at: dateString,
@@ -146,7 +160,7 @@ app.post("/api/auth/import-local", async (c) => {
   for (const p of v.plans)
     statements.push(
       c.env.DB.prepare(
-        "INSERT INTO plans(id,project_id,number,global_number,title,body,summary,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO plans(id,project_id,number,global_number,title,body,summary,code_reference,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
       ).bind(
         p.id,
         p.project_id,
@@ -155,6 +169,7 @@ app.post("/api/auth/import-local", async (c) => {
         p.title,
         p.body,
         p.summary ?? null,
+        p.code_reference ?? null,
         p.status,
         p.created_at,
         p.updated_at,

@@ -7,6 +7,7 @@ import {
   NotFoundError,
   updatePlanSchema,
   type Actor,
+  type CodeReference,
   type Plan,
   type PlanStatus,
 } from "@statedock/core";
@@ -245,7 +246,7 @@ export class TaskRepository extends ProjectRepository {
   async updatePlan(
     key: string,
     number: number,
-    input: ReturnType<typeof updatePlanSchema.parse>,
+    input: ReturnType<typeof updatePlanSchema.parse> & { codeReference?: CodeReference | null },
     actor: Actor,
   ): Promise<Plan> {
     const pid = await this.projectId(key);
@@ -279,6 +280,7 @@ export class TaskRepository extends ProjectRepository {
       title: input.title,
       body: input.body,
       summary: input.summary,
+      codeReference: input.codeReference,
       status: input.status,
       assignedAgentId: input.assignedAgentId,
       claimedAgentId: input.status === "READY" ? null : undefined,
@@ -289,13 +291,16 @@ export class TaskRepository extends ProjectRepository {
         title: "title",
         body: "body",
         summary: "summary",
+        codeReference: "code_reference",
         status: "status",
         assignedAgentId: "assigned_agent_id",
         claimedAgentId: "claimed_agent_id",
         claimId: "claim_id",
       };
       const sets = changes.map(([k]) => `${columns[k]}=?`);
-      const values = changes.map(([, v]) => v);
+      const values = changes.map(([key, value]) =>
+        key === "codeReference" && value !== null ? JSON.stringify(value) : value,
+      );
       const at = new Date(Math.max(Date.now(), Date.parse(existing.updatedAt) + 1)).toISOString();
       const [result] = await this.db.batch([
         this.db

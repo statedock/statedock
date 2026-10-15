@@ -65,6 +65,7 @@ export class RepositoryContext {
       title: row.title,
       body: row.body,
       summary: row.summary ?? null,
+      codeReference: row.code_reference ? JSON.parse(row.code_reference) : null,
       status: row.status,
       assignedAgentId: row.assigned_agent_id ?? null,
       claimedAgentId: row.claimed_agent_id ?? null,
