@@ -9,6 +9,7 @@ import {
   createProjectSchema,
   feedbackSchema,
   fileSchema,
+  handoffSchema,
   planLocatorSchema,
   planStatuses,
   reviewSchema,
@@ -17,6 +18,7 @@ import {
   type Activity,
   type Actor,
   type Attachment,
+  type CodeReference,
   type MarkdownFile,
   type Plan,
   type PlanEventPage,
@@ -66,7 +68,7 @@ export interface Repository {
   updatePlan(
     key: string,
     number: number,
-    input: ReturnType<typeof updatePlanSchema.parse>,
+    input: ReturnType<typeof updatePlanSchema.parse> & { codeReference?: CodeReference | null },
     actor: Actor,
   ): Promise<Plan>;
   movePlan(plan: Plan, targetProjectKey: string, actor: Actor): Promise<Plan>;
@@ -266,6 +268,7 @@ export class StateDockService {
           number: lastDone.number,
           title: lastDone.title,
           summary: lastDone.summary,
+          codeReference: lastDone.codeReference ?? null,
           completedAt: lastDone.updatedAt,
         }
       : null;
@@ -362,13 +365,10 @@ export class StateDockService {
     );
     return updated;
   }
-  async submitHandoff(
-    locator: unknown,
-    input: { changes: string; verification?: string; nextSteps?: string },
-    actor: Actor,
-  ): Promise<Plan> {
+  async submitHandoff(locator: unknown, input: unknown, actor: Actor): Promise<Plan> {
+    const handoff = handoffSchema.parse(input);
     const plan = await this.resolvePlan(locator);
-    const combined = `${input.changes || ""} ${input.verification || ""} ${input.nextSteps || ""}`;
+    const combined = `${handoff.changes} ${handoff.verification || ""} ${handoff.nextSteps || ""}`;
     const isZh = /[\u4e00-\u9fa5]/.test(combined);
     const formatPart = (zhLabel: string, enLabel: string, text?: string) => {
       if (!text?.trim()) return "";
@@ -383,18 +383,24 @@ export class StateDockService {
       return `${isZh ? zhLabel : enLabel}${clean}`;
     };
     const parts: string[] = [];
-    const c = formatPart("变更：", "Changes: ", input.changes);
+    const c = formatPart("变更：", "Changes: ", handoff.changes);
     if (c) parts.push(c);
-    const v = formatPart("验证：", "Verification: ", input.verification);
+    const v = formatPart("验证：", "Verification: ", handoff.verification);
     if (v) parts.push(v);
-    const n = formatPart("注意：", "Notes: ", input.nextSteps);
+    const n = formatPart("注意：", "Notes: ", handoff.nextSteps);
     if (n) parts.push(n);
     const summary = parts.join(isZh ? "；" : "; ");
-    const updated = await this.updatePlan(
+    const parsedActor = actorSchema.parse(actor);
+    const updated = await this.store.updatePlan(
       plan.projectId,
       plan.number,
-      { status: "DONE", summary, expectedUpdatedAt: plan.updatedAt },
-      actorSchema.parse(actor),
+      {
+        status: "DONE",
+        summary,
+        codeReference: handoff.codeReference ?? null,
+        expectedUpdatedAt: plan.updatedAt,
+      },
+      parsedActor,
     );
     await this.appendActivity(
       plan.projectId,
@@ -402,9 +408,9 @@ export class StateDockService {
         action: "plan.handoff",
         subjectType: "plan",
         subjectId: plan.id,
-        details: { number: plan.number, reference: plan.reference, ...input },
+        details: { number: plan.number, reference: plan.reference, ...handoff },
       },
-      actorSchema.parse(actor),
+      parsedActor,
     );
     return updated;
   }

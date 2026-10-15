@@ -400,6 +400,68 @@ export function TaskDetail({ model }: { model: ReturnType<typeof usePlanBoard> }
             <p className="text-[11px] text-muted-foreground">{pI18n.handoffDesc}</p>
           </div>
 
+          {selectedPlan.status === "DONE" && selectedPlan.codeReference && (
+            <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <h3 className="text-xs font-semibold text-foreground">
+                {pI18n.codeReferenceSection}
+              </h3>
+              <dl className="grid gap-2 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]">
+                <dt className="text-muted-foreground">{pI18n.codeReferenceCommit}</dt>
+                <dd className="break-all font-mono text-foreground">
+                  {selectedPlan.codeReference.commit}
+                </dd>
+                {selectedPlan.codeReference.branch && (
+                  <>
+                    <dt className="text-muted-foreground">{pI18n.codeReferenceBranch}</dt>
+                    <dd className="break-all font-mono text-foreground">
+                      {selectedPlan.codeReference.branch}
+                    </dd>
+                  </>
+                )}
+                <dt className="text-muted-foreground">{pI18n.codeReferenceWorkingTree}</dt>
+                <dd
+                  className={
+                    selectedPlan.codeReference.workingTree === "clean"
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : "text-amber-700 dark:text-amber-400"
+                  }
+                >
+                  {selectedPlan.codeReference.workingTree === "clean"
+                    ? pI18n.codeReferenceClean
+                    : pI18n.codeReferenceDirty}
+                </dd>
+                {selectedPlan.codeReference.repository && (
+                  <>
+                    <dt className="text-muted-foreground">{pI18n.codeReferenceRepository}</dt>
+                    <dd className="break-all font-mono text-foreground">
+                      {selectedPlan.codeReference.repository}
+                    </dd>
+                  </>
+                )}
+                {selectedPlan.codeReference.url && (
+                  <>
+                    <dt className="text-muted-foreground">URL</dt>
+                    <dd>
+                      <a
+                        href={selectedPlan.codeReference.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400"
+                      >
+                        {pI18n.codeReferenceOpenUrl}
+                      </a>
+                    </dd>
+                  </>
+                )}
+              </dl>
+              {selectedPlan.codeReference.workingTree === "dirty" && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {pI18n.codeReferenceDirtyNote}
+                </p>
+              )}
+            </div>
+          )}
+
           <Attachments key={selectedPlan.id} reference={selectedPlan.reference} />
           <TaskFollowUp key={`follow-${selectedPlan.id}`} plan={selectedPlan} />
           {/* Footer Actions */}

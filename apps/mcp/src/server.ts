@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   actorSchema,
+  codeReferenceSchema,
   ConflictError,
   feedbackSchema,
   NotFoundError,
@@ -264,7 +265,7 @@ export function createServer(service: StateDockService, identity: Actor, publicO
   );
   tool(
     "submit_handoff",
-    "Submit structured handoff summary (what was changed, verification evidence, remaining notes/next steps) and mark task as DONE.",
+    "Submit a structured handoff and mark the task DONE. When a Git repository is available, automatically include codeReference with its full HEAD SHA, branch, clean/dirty working tree, optional repository identifier and HTTPS commit/PR URL. Omit codeReference when there is no repository; it is a locator, not verification or review evidence.",
     {
       ...locator,
       changes: z.string().min(1).describe("Concise explanation of what was changed or implemented"),
@@ -276,12 +277,18 @@ export function createServer(service: StateDockService, identity: Actor, publicO
         .string()
         .optional()
         .describe("Remaining notes, limitations, or follow-ups for the next agent or human"),
+      codeReference: codeReferenceSchema
+        .nullable()
+        .optional()
+        .describe(
+          "Optional Git reference captured from the task's code repository: full 40/64-character HEAD SHA, branch or null when detached, workingTree clean/dirty (including uncommitted changes), optional repository identifier, and optional credential-free HTTPS commit or pull request URL. Omit when there is no Git repository. This does not prove verification or review.",
+        ),
     },
     false,
-    async ({ project, number, reference, changes, verification, nextSteps }) => {
+    async ({ project, number, reference, changes, verification, nextSteps, codeReference }) => {
       return service.submitHandoff(
         locate({ project, number, reference }),
-        { changes, verification, nextSteps },
+        { changes, verification, nextSteps, codeReference },
         actor,
       );
     },

@@ -18,6 +18,19 @@ Upstream English Skill standard: <https://statedock.dev/skill.md>. The open-sour
 - Reuse the same binding in later conversations for this project. Rebind only when the user changes workspaces or explicitly specifies another project.
 - If MCP is unavailable, continue the code work the user authorized, but do not claim that StateDock was updated. Do not change connection settings or repeatedly restart anything just to find MCP.
 
+## Check task context and execution conditions before acting
+
+Before changing an existing StateDock task, perform a lightweight preflight from the current records and workspace:
+
+- Read the exact task and confirm its project, status, assigned identity, and claim owner. Use the task's current body, decisions, summary, and relevant recent notes or feedback as the source of truth; do not rely on an old chat recollection. Read attachments when present.
+- Restore only the project context needed for this task. If a detail is uncertain, inspect the relevant history, source files, documentation, Git status and relevant diffs, plus the current working directory and available tools or permissions. Do not reread unrelated history or ask the user to resolve facts that can be checked directly.
+- Resolve routine implementation choices and ambiguities yourself when the task goal and prior decisions allow it. Preserve unrelated local changes and follow the repository's existing conventions.
+- Ask the user only when there is a real conflict in the request or saved decisions, required authorization or access is missing, or a choice must be made by the human. If the task is assigned to another identity or is already being worked by another Agent, do not claim or overwrite it; report the mismatch and wait for reassignment.
+- Record an important discovery or decision on the original task using its existing discussion/activity mechanism. Keep the original scope and use existing fields; do not create tracking fields or expand the task into product, database, approval, or orchestration features unless the user explicitly asks.
+- Before the first write, verify that the workspace and StateDock project match and that the task is in a state this credential may execute. For a Ready queue item, claim it atomically under the verified identity.
+
+Example: for a task to add CSV export, read the task and its latest decision, inspect the existing export path and relevant local changes, then implement the agreed format while preserving unrelated edits. If a recent decision conflicts with the task body about which columns to export, ask the user to resolve that conflict; do not ask merely because the repository has uncommitted work that can be inspected safely.
+
 ## Identify the work
 
 - **Execution request:** When the user asks for an independent, user-visible addition, change, redo, repair, refactor, or implementation, create a `WORKING` Task and begin without asking whether to start. Keep feedback, corrections, and iterations for the same goal on that Task. Minor styling, internal steps, follow-up questions, and troubleshooting are part of the current Task; do not create separate records for them.
@@ -48,6 +61,8 @@ To let the next Agent continue without rereading a long conversation and to make
 3. **Notes / Next Steps:** Include relevant configuration reminders, limitations, or remaining follow-up.
 
 - Prefer `submit_handoff(reference, { changes, verification, nextSteps })`; the server assembles the summary and atomically marks the Task `DONE`.
+- When the task involved a Git repository, inspect it at handoff time and include the optional structured `codeReference`: full HEAD commit SHA, current branch (or null when detached), and `workingTree: "clean" | "dirty"` reflecting staged, unstaged, and untracked changes. Add a safe repository identifier and HTTPS commit or pull request URL when available. The HEAD can predate dirty working-tree changes; report the dirty state explicitly and do not imply the commit contains them.
+- If there is no Git repository, omit `codeReference` and do not initialize Git. Never store a diff. A code reference locates a version; it does not prove acceptance, verification, or an independent Review.
 - If using `update_plan`, a concise format is `Changes: ...; Verification: ...; Notes: ...` (or the equivalent in the conversation language).
 
 ## Reminders and external notifications

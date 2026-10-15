@@ -7,6 +7,7 @@ import {
   type Activity,
   type Actor,
   type Attachment,
+  type CodeReference,
   type MarkdownFile,
   type Plan,
   type PlanEventPage,
@@ -45,6 +46,7 @@ const planOut = (r: typeof plans.$inferSelect): Plan => ({
   title: r.title,
   body: r.body,
   summary: r.summary,
+  codeReference: r.codeReference ? JSON.parse(r.codeReference) : null,
   status: r.status,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
@@ -314,6 +316,7 @@ export class SqliteRepository {
     projectId: string,
     number: number,
     input: Partial<Pick<Plan, "title" | "body" | "summary" | "status">> & {
+      codeReference?: CodeReference | null;
       expectedUpdatedAt?: string;
     },
     actor: Actor,
@@ -322,11 +325,17 @@ export class SqliteRepository {
     const existing = await this.getPlan(projectId, number);
     if (input.expectedUpdatedAt && input.expectedUpdatedAt !== existing.updatedAt)
       throw new ConflictError("Plan 已被其他人或 agent 更新，请重新读取后再保存。");
-    const { expectedUpdatedAt, ...changes } = input;
+    const { expectedUpdatedAt, codeReference, ...changes } = input;
     const at = new Date(Math.max(Date.now(), Date.parse(existing.updatedAt) + 1)).toISOString();
     const updated = await this.db
       .update(plans)
-      .set({ ...changes, updatedAt: at })
+      .set({
+        ...changes,
+        ...(codeReference !== undefined
+          ? { codeReference: codeReference ? JSON.stringify(codeReference) : null }
+          : {}),
+        updatedAt: at,
+      })
       .where(and(eq(plans.id, existing.id), eq(plans.updatedAt, existing.updatedAt)))
       .returning({ id: plans.id });
     if (!updated.length) throw new ConflictError("Task changed; read it again before saving");

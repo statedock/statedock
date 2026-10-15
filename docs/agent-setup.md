@@ -27,6 +27,12 @@ Through the **actual selected MCP connection**, call `get_instance_info`. Its `p
 
 Only after verification, list projects on that connection and select or create the intended project. Bind the repository using the tuple **connection name + public origin + project UUID**, with local path as supplementary information. A project name or UUID alone cannot identify an instance. Save this binding in the repository's working rules without credentials. Before each new conversation performs a write, verify `get_instance_info` against that binding again; if multiple connections exist, use the explicitly bound one.
 
+## Check task context and execution conditions
+
+Before changing an existing task, read its current record and verify its project, status, assigned identity, and claim owner. Review the current goal, decisions, summary, relevant recent discussion or feedback, and attachments. Restore only the project context needed for the work. When something is unclear, inspect relevant history, source files, documentation, Git status and relevant diffs, the actual working directory, and available tools or permissions. Resolve routine choices yourself when the task and saved decisions allow it, preserve unrelated local changes, and do not ask the user to confirm facts you can verify. Ask only for a real conflict, missing authorization or access, or a decision that requires the human. Record important findings on the original task using existing fields; do not add management fields or expand scope into UI, database, approval, or orchestration work. If another identity owns the task or another Agent is working on it, do not claim or overwrite it.
+
+When submitting a handoff from a Git repository, include the optional `codeReference` with full HEAD SHA, branch (or null when detached), and clean/dirty working-tree state, including staged, unstaged, and untracked changes. Optionally include a safe repository identifier and HTTPS commit/PR URL. Dirty state means HEAD may not contain the worktree changes. Omit the field if there is no Git repository; do not initialize Git or store diffs. This reference is not verification or independent review evidence.
+
 Read the verified instance's `/skill.md` and configure project working rules. StateDock records goals through MCP calls; it does not observe every conversation automatically. Each collaborator uses their own account and credentials. Never put tokens in task descriptions or commit them. Revoked credentials require reconnecting.
 
 ## Instance working rules

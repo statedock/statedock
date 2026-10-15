@@ -3,6 +3,44 @@ import { z } from "zod";
 export const planStatuses = ["PLAN", "READY", "WORKING", "WAITING", "DONE", "DROPPED"] as const;
 export type PlanStatus = (typeof planStatuses)[number];
 
+export const codeReferenceSchema = z.object({
+  commit: z.string().regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i, "Use a full Git commit SHA"),
+  branch: z.string().max(500).nullable().optional(),
+  workingTree: z.enum(["clean", "dirty"]),
+  repository: z
+    .string()
+    .trim()
+    .min(1)
+    .max(500)
+    .refine(
+      (value) => !/^[a-z][a-z0-9+.-]*:\/\//i.test(value),
+      "Use a repository identifier, not a URL",
+    )
+    .optional(),
+  url: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === "https:" && !parsed.username && !parsed.password;
+      } catch {
+        return false;
+      }
+    }, "Use a credential-free HTTPS commit or pull request URL")
+    .optional(),
+});
+export type CodeReference = z.infer<typeof codeReferenceSchema>;
+
+export const handoffSchema = z.object({
+  changes: z.string().min(1),
+  verification: z.string().optional(),
+  nextSteps: z.string().optional(),
+  codeReference: codeReferenceSchema.nullable().optional(),
+});
+export type HandoffInput = z.infer<typeof handoffSchema>;
+
 export const actorSchema = z.object({
   id: z.string().min(1).max(200),
   type: z.enum(["human", "agent", "system"]).default("human"),
@@ -91,6 +129,7 @@ export interface Plan {
   title: string;
   body: string;
   summary: string | null;
+  codeReference?: CodeReference | null;
   status: PlanStatus;
   assignedAgentId?: string | null;
   claimedAgentId?: string | null;

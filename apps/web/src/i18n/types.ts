@@ -120,6 +120,15 @@ export interface Translations {
       insertTemplate: string;
       handoffPlaceholder: string;
       handoffDesc: string;
+      codeReferenceSection: string;
+      codeReferenceCommit: string;
+      codeReferenceBranch: string;
+      codeReferenceWorkingTree: string;
+      codeReferenceClean: string;
+      codeReferenceDirty: string;
+      codeReferenceRepository: string;
+      codeReferenceOpenUrl: string;
+      codeReferenceDirtyNote: string;
       markInProgress: string;
       discard: string;
       saveChanges: string;

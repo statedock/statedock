@@ -123,6 +123,16 @@ export const en: Translations = {
         "Briefly note what was done, or fill the 3-part Changes/Verification/Notes contract.",
       handoffDesc:
         "Handoff results submitted by Agent (or developer): includes changes, verification, and notes.",
+      codeReferenceSection: "Code Reference",
+      codeReferenceCommit: "Commit",
+      codeReferenceBranch: "Branch",
+      codeReferenceWorkingTree: "Working tree",
+      codeReferenceClean: "Clean",
+      codeReferenceDirty: "Dirty · uncommitted changes",
+      codeReferenceRepository: "Repository",
+      codeReferenceOpenUrl: "Open commit or pull request",
+      codeReferenceDirtyNote:
+        "The commit is the repository HEAD at handoff time; uncommitted changes are not included in that commit.",
       markInProgress: "Mark In Progress",
       discard: "Discard Changes",
       saveChanges: "Save Changes",

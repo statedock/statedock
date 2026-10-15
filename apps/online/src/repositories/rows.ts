@@ -17,6 +17,7 @@ export interface PlanRow {
   title: string;
   body: string;
   summary: string | null;
+  code_reference: string | null;
   status: PlanStatus;
   assigned_agent_id: string | null;
   claimed_agent_id: string | null;
