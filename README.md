@@ -1,48 +1,42 @@
 # StateDock
 
-A shared Todo for you & AI. Keep coding. StateDock keeps track.
+A shared workspace for people and coding agents to track project goals, tasks, and outcomes.
 
-StateDock connects your existing agents through shared projects, tasks, plans, progress, results, and notifications. Discuss a plan in ChatGPT, continue with Codex or Claude Code, and keep the project history in one place. Each teammate uses their own tools and credentials.
+This repository is the Cloudflare self-hosted edition. Deploy it in your own Cloudflare account; you operate its Workers, D1, KV, R2, domain, email delivery, and backups. It is separate from StateDock Cloud and has no Cloud subscription tiers.
 
-The official marketing website, interactive demos and promotional pages are excluded.
+- Product and shared feature guide: [statedock.dev/doc](https://statedock.dev/doc#cloudflare-self-hosted)
+- Install and deploy: [docs/self-hosting.md](docs/self-hosting.md)
+- Back up, restore, and upgrade: [docs/operations.md](docs/operations.md)
+- Agent and MCP setup: [docs/agent-setup.md](docs/agent-setup.md)
+- Architecture, validation, and migrations: [docs/architecture.md](docs/architecture.md) · [docs/validation.md](docs/validation.md) · [docs/migrations.md](docs/migrations.md)
+- Security reports: [SECURITY.md](SECURITY.md)
 
-This repository contains the complete self-deployed product: PWA, accounts, shared projects, attachments, history, API, MCP, OAuth, and Bark / ntfy / Telegram / Discord / outgoing Webhook integrations.
+## Coding-tool plugins
 
-There are no subscription tiers, project quotas, paid notification channels, license servers, or redemption codes. Infrastructure costs belong to the instance operator. Authentication, project ownership checks, rate limits, and upload safeguards remain enabled.
+StateDock's separate [MIT plugin repository](https://github.com/statedock/statedock-plugins) provides shared Skills for saving plans, restoring task context, and recording progress through StateDock Remote MCP. The current packages target the hosted service at `https://statedock.dev/mcp`; self-hosted deployments can use the Skills with their own MCP setup, but the published packages' default endpoint is the hosted service.
 
-## Deploy
+- **Codex:** available from the plugin repository's local marketplace; installation is documented in its README.
+- **DeepSeek Harness:** [`@statedock/dsh-plugin`](https://www.npmjs.com/package/@statedock/dsh-plugin) is published for Harness `0.2.0-rc.2`; see the [official community showcase](https://github.com/deepseek-ai/deepseek-harness/discussions/9776).
+- **ChatGPT app:** submitted to OpenAI for review; approval is pending.
+- **Cursor:** Marketplace submission materials are being prepared; installation and approval are not yet verified.
 
-The first release targets **your own Cloudflare account** using Workers, D1, KV, and R2. Docker and production deployment on arbitrary servers are not delivered by this release.
+These plugins record and restore project state. They do not execute task code or schedule agents. Plugin code is MIT-licensed; this self-hosted service remains AGPL-3.0-only.
 
-Start with [the deployment guide](docs/self-hosting.md). You will need your own email delivery configuration and a public HTTPS origin for external OAuth/MCP clients. All authentication, task data, and notifications work independently of the official StateDock backend.
+For a complete local install, use the deployment guide above. It covers the required Cloudflare resources, verified email sender, public HTTPS origin, secrets, migrations, deployment, administrator approval, and agent access. The operations guide contains offline backup and recovery steps.
 
-## Development
+## Development checks
 
-`pnpm dev` and `pnpm mcp` start the local SQLite API and stdio MCP adapters for development and regression testing. They do not provide the account, membership, OAuth and notification services of the deployed Worker. Use the Cloudflare guide for a complete instance. The local SQLite and Worker D1 schemas have separate migration histories; see [architecture](docs/architecture.md).
+Requirements and the repository's checks are listed in [CONTRIBUTING.md](CONTRIBUTING.md). Typical verification:
 
-Node.js 22+ and pnpm 9.15.4:
-
-```sh
+~~~sh
 pnpm install --frozen-lockfile
-pnpm deploy:dry-run
 pnpm test
 pnpm typecheck
 pnpm lint
 pnpm format:check
 pnpm selfhost:check
-pnpm test:release
-```
-
-[Validation and limitations](docs/validation.md) · [Architecture and contribution rules](docs/architecture.md) · [Backups and upgrades](docs/operations.md) · [Agent connection](docs/agent-setup.md) · [Security reporting](SECURITY.md)
+~~~
 
 ## License
 
-StateDock is licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE). Third-party packages retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The license does not grant rights to StateDock trademarks or imply official endorsement of third-party instances.
-
-Deployment depends on your Cloudflare resources, email delivery and external client configuration. See the validation guide for checks to run on your own instance.
-
-Built-in Web Push delivers task notifications to enabled mobile and desktop devices while the PWA is closed. Configure persistent VAPID secrets once; see [Web Push setup](docs/self-hosting.md#built-in-web-push). Existing external notification channels remain optional.
-
-### Agent Identities and Ready queues
-
-Assign Ready tasks to logical identities and bind MCP tokens or OAuth connections to them. Agents claim only their own assigned queue by default; unassigned work needs explicit authorization. Multiple connections may share one identity. See [identity setup and queue execution](docs/agent-setup.md#agent-identities-and-assigned-ready-tasks) and [upgrade migrations](docs/migrations.md).
+StateDock is licensed under [AGPL-3.0-only](LICENSE). Dependencies retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The license does not grant rights to StateDock trademarks or imply official endorsement of third-party instances.
