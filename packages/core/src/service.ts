@@ -9,6 +9,7 @@ import {
   createProjectSchema,
   feedbackSchema,
   fileSchema,
+  ForbiddenError,
   handoffSchema,
   planLocatorSchema,
   planStatuses,
@@ -163,7 +164,7 @@ export class StateDockService {
     if (plan.status === "DONE" || plan.status === "DROPPED")
       throw new ConflictError("这项工作已结束；请先明确是否重新打开。");
     if (plan.status === "WORKING") return plan;
-    return this.updatePlan(
+    return this.applyPlanUpdate(
       plan.projectId,
       plan.number,
       { status: "WORKING", expectedUpdatedAt: plan.updatedAt },
@@ -207,7 +208,27 @@ export class StateDockService {
   createPlan(key: string, input: unknown, actor: Actor) {
     return this.store.createPlan(key, createPlanSchema.parse(input), actorSchema.parse(actor));
   }
-  updatePlan(key: string, number: number, input: unknown, actor: Actor) {
+  /**
+   * Edits to an existing task. An agent may only resume work (status WORKING): the goal, its
+   * decisions and its outcome are written by the person, or recorded through the lifecycle
+   * operations (pause, handoff, notes) that leave the original text in place.
+   */
+  async updatePlan(key: string, number: number, input: unknown, actor: Actor) {
+    const parsed = updatePlanSchema.parse(input);
+    if (actorSchema.parse(actor).type === "agent") {
+      const edited = (["title", "body", "summary"] as const).filter((k) => parsed[k] !== undefined);
+      if (edited.length)
+        throw new ForbiddenError(
+          `Agents cannot edit a task's ${edited.join(", ")}. Record what you learn with add_note, block with pause_task, and finish with submit_handoff.`,
+        );
+      if (parsed.status !== undefined && parsed.status !== "WORKING")
+        throw new ForbiddenError(
+          "Agents can only resume a task to WORKING with update_plan. Use pause_task to block and submit_handoff to finish; a person sets READY, PLAN or DROPPED.",
+        );
+    }
+    return this.applyPlanUpdate(key, number, parsed, actor);
+  }
+  private applyPlanUpdate(key: string, number: number, input: unknown, actor: Actor) {
     return this.store.updatePlan(
       key,
       z.number().int().positive().parse(number),
@@ -325,7 +346,7 @@ export class StateDockService {
       const candidate = [...plans].sort((a, b) => a.number - b.number)[0];
       if (!candidate) return null;
       try {
-        return await this.updatePlan(
+        return await this.applyPlanUpdate(
           project.id,
           candidate.number,
           { status: "WORKING", expectedUpdatedAt: candidate.updatedAt },
@@ -347,7 +368,7 @@ export class StateDockService {
     const updatedBody = plan.body
       ? `${prefix}${cleanReason}\n\n${plan.body}`
       : `${prefix}${cleanReason}`;
-    const updated = await this.updatePlan(
+    const updated = await this.applyPlanUpdate(
       plan.projectId,
       plan.number,
       { status: "WAITING", body: updatedBody, expectedUpdatedAt: plan.updatedAt },
@@ -387,6 +408,12 @@ export class StateDockService {
     if (c) parts.push(c);
     const v = formatPart("验证：", "Verification: ", handoff.verification);
     if (v) parts.push(v);
+    if (handoff.deliverables?.length) {
+      const items = handoff.deliverables
+        .map((d) => (d.title ? `${d.title} — ${d.location}` : d.location))
+        .join(" | ");
+      parts.push(`${isZh ? "成果：" : "Deliverables: "}${items}`);
+    }
     const n = formatPart("注意：", "Notes: ", handoff.nextSteps);
     if (n) parts.push(n);
     const summary = parts.join(isZh ? "；" : "; ");

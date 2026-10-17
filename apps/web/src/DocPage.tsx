@@ -1,643 +1,448 @@
 import { StateDockLogo } from "@/components/layout/StateDockLogo";
-import { ArrowUpRight, Bot, Check, Copy, ExternalLink, ShieldCheck, Users } from "lucide-react";
-import { useState } from "react";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { useI18n } from "@/i18n/context";
+import { ArrowUpRight, Check, Copy, ExternalLink } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-export function DocPage() {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [copiedAll, setCopiedAll] = useState(false);
+type Heading = { id: string; title: string; level: number; alias?: string };
 
-  const copyText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+const SECTION_IDS = [
+  "overview",
+  "getting-started",
+  "shared-features",
+  "agent-identities-and-ready-queues",
+  "task-lifecycle",
+  "statedock-cloud",
+  "cloudflare-self-hosted",
+  "statedock-local",
+  "notifications",
+  "troubleshooting",
+];
 
-  const copyFullMarkdown = async () => {
-    try {
-      const res = await fetch("/doc.md");
-      const md = await res.text();
-      await navigator.clipboard.writeText(md);
-      setCopiedAll(true);
-      setTimeout(() => setCopiedAll(false), 2000);
-    } catch (e) {
-      console.error("Failed to copy markdown", e);
+const LEGACY_ANCHORS: Record<number, string> = {
+  0: "overview",
+  1: "quickstart",
+  2: "collaboration",
+  3: "identities",
+  4: "lifecycle",
+  5: "quotas",
+  7: "docker-self-hosted",
+  8: "notifications",
+  9: "faq",
+};
+
+function cleanHeading(value: string): string {
+  return value
+    .replace(/\[(.*?)\]\([^)]+\)/g, "$1")
+    .replace(/[*_~]/g, "")
+    .trim();
+}
+
+function slugify(value: string): string {
+  return cleanHeading(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}-]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function headingsIn(markdown: string): Heading[] {
+  let section = 0;
+  return markdown.split("\n").flatMap((line) => {
+    const match = line.match(/^(#{2,3})\s+(.+?)\s*#*$/);
+    if (!match) return [];
+    const level = match[1].length;
+    const sectionIndex = level === 2 ? section++ : -1;
+    return [
+      {
+        id: sectionIndex >= 0 ? SECTION_IDS[sectionIndex] || slugify(match[2]) : slugify(match[2]),
+        title: cleanHeading(match[2]),
+        level,
+        alias: sectionIndex >= 0 ? LEGACY_ANCHORS[sectionIndex] : undefined,
+      },
+    ];
+  });
+}
+
+function safeHref(href: string): string | null {
+  const value = href.trim();
+  return /^(https?:|mailto:)/i.test(value) || value.startsWith("/") || value.startsWith("#")
+    ? value
+    : null;
+}
+
+function renderInline(text: string): ReactNode[] {
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g);
+  return parts.filter(Boolean).map((part, index) => {
+    const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) {
+      const href = safeHref(link[2]);
+      return href ? (
+        <a
+          key={index}
+          href={href}
+          className="text-primary underline underline-offset-2 hover:opacity-80"
+          target={/^https?:/i.test(href) ? "_blank" : undefined}
+          rel={/^https?:/i.test(href) ? "noreferrer" : undefined}
+        >
+          {link[1]}
+        </a>
+      ) : (
+        link[1]
+      );
     }
-  };
+    if (
+      (part.startsWith("**") && part.endsWith("**")) ||
+      (part.startsWith("__") && part.endsWith("__"))
+    ) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (
+      (part.startsWith("*") && part.endsWith("*")) ||
+      (part.startsWith("_") && part.endsWith("_"))
+    ) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
 
-  const connectionName = `statedock_${window.location.host.replace(/[^a-zA-Z0-9]/g, "_")}`;
-  const mcpConfigJson = `{
-  "mcpServers": {
-    "${connectionName}": {
-      "url": "${window.location.origin}/mcp",
-      "headers": {
-        "Authorization": "Bearer sdm_YOUR_TOKEN_HERE"
+function tableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isTableDivider(line: string): boolean {
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.trim());
+}
+
+function renderMarkdown(markdown: string): ReactNode[] {
+  const lines = markdown.replace(/\r/g, "").split("\n");
+  const blocks: ReactNode[] = [];
+  let index = 0;
+  let h2Index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith("~~~")) {
+      const code: string[] = [];
+      index += 1;
+      while (index < lines.length && !lines[index].startsWith("~~~")) code.push(lines[index++]);
+      if (index < lines.length) index += 1;
+      blocks.push(
+        <pre
+          key={blocks.length}
+          className="overflow-x-auto rounded-xl border border-border bg-muted/50 p-4 text-sm"
+        >
+          <code className="font-mono">{code.join("\n")}</code>
+        </pre>,
+      );
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*#*$/);
+    if (heading) {
+      const level = heading[1].length;
+      const title = heading[2];
+      const sectionIndex = level === 2 ? h2Index++ : -1;
+      const id = sectionIndex >= 0 ? SECTION_IDS[sectionIndex] || slugify(title) : slugify(title);
+      const alias = sectionIndex >= 0 ? LEGACY_ANCHORS[sectionIndex] : undefined;
+      const Tag = ("h" + level) as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+      const classes =
+        level === 1
+          ? "scroll-mt-24 text-3xl font-bold tracking-tight sm:text-4xl"
+          : level === 2
+            ? "scroll-mt-24 border-b border-border/70 pb-2 text-2xl font-semibold tracking-tight"
+            : "scroll-mt-24 text-lg font-semibold tracking-tight";
+      blocks.push(
+        <Tag key={blocks.length} id={id} className={classes}>
+          {alias && alias !== id && <span id={alias} />} {renderInline(title)}
+        </Tag>,
+      );
+      index += 1;
+      continue;
+    }
+
+    if (line.trim() === "---" || line.trim() === "***") {
+      blocks.push(<hr key={blocks.length} className="border-border" />);
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith(">")) {
+      const quote: string[] = [];
+      while (index < lines.length && lines[index].startsWith(">"))
+        quote.push(lines[index++].replace(/^>\s?/, ""));
+      blocks.push(
+        <blockquote
+          key={blocks.length}
+          className="border-l-2 border-primary/40 pl-4 text-muted-foreground"
+        >
+          {renderInline(quote.join(" "))}
+        </blockquote>,
+      );
+      continue;
+    }
+
+    if (line.includes("|") && index + 1 < lines.length && isTableDivider(lines[index + 1])) {
+      const headers = tableCells(line);
+      index += 2;
+      const rows: string[][] = [];
+      while (index < lines.length && lines[index].trim().includes("|"))
+        rows.push(tableCells(lines[index++]));
+      blocks.push(
+        <div key={blocks.length} className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead className="bg-muted/60">
+              <tr>
+                {headers.map((cell, cellIndex) => (
+                  <th key={cellIndex} className="border-b border-border px-3 py-2 font-semibold">
+                    {renderInline(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="even:bg-muted/20">
+                  {headers.map((_, cellIndex) => (
+                    <td key={cellIndex} className="border-b border-border/70 px-3 py-2 align-top">
+                      {renderInline(row[cellIndex] || "")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+
+    const listMatch = line.match(/^\s*([-*+]\s+|\d+\.\s+)(.*)$/);
+    if (listMatch) {
+      const ordered = /^\d/.test(listMatch[1]);
+      const items: string[] = [];
+      while (index < lines.length) {
+        const item = lines[index].match(/^\s*([-*+]\s+|\d+\.\s+)(.*)$/);
+        if (!item || /^\d/.test(item[1]) !== ordered) break;
+        items.push(item[2]);
+        index += 1;
       }
+      const List = ordered ? "ol" : "ul";
+      blocks.push(
+        <List
+          key={blocks.length}
+          className={ordered ? "list-decimal space-y-2 pl-6" : "list-disc space-y-2 pl-6"}
+        >
+          {items.map((item, itemIndex) => (
+            <li key={itemIndex}>{renderInline(item)}</li>
+          ))}
+        </List>,
+      );
+      continue;
     }
-  }
-}`;
 
-  const codexConfigToml = `[mcp_servers.${connectionName}]
-url = "${window.location.origin}/mcp"
-http_headers = { "Authorization" = "Bearer sdm_YOUR_TOKEN_HERE" }`;
+    const paragraph: string[] = [];
+    while (index < lines.length) {
+      const current = lines[index];
+      if (
+        !current.trim() ||
+        current.startsWith("~~~") ||
+        /^(#{1,6})\s/.test(current) ||
+        current.startsWith(">") ||
+        current.trim() === "---"
+      )
+        break;
+      if (current.includes("|") && index + 1 < lines.length && isTableDivider(lines[index + 1]))
+        break;
+      if (/^\s*([-*+]\s+|\d+\.\s+)/.test(current)) break;
+      paragraph.push(current.trim());
+      index += 1;
+    }
+    blocks.push(
+      <p key={blocks.length} className="leading-7 text-foreground/85">
+        {renderInline(paragraph.join(" "))}
+      </p>,
+    );
+  }
+  return blocks;
+}
+
+export function DocPage({ initialMarkdown }: { initialMarkdown?: string } = {}) {
+  const { lang } = useI18n();
+  const [markdown, setMarkdown] = useState(initialMarkdown ?? "");
+  const [loading, setLoading] = useState(!initialMarkdown);
+  const [loadError, setLoadError] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const markdownPath = lang === "zh" ? "/doc.zh.md" : "/doc.md";
+
+  useEffect(() => {
+    if (initialMarkdown && markdown) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(false);
+    fetch(markdownPath, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Documentation request failed");
+        setMarkdown(await response.text());
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [markdownPath]);
+
+  const headings = useMemo(() => headingsIn(markdown), [markdown]);
+  const copyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const text =
+    lang === "zh"
+      ? {
+          onPage: "本页内容",
+          loading: "正在加载文档…",
+          failed: "文档加载失败。请直接打开 Markdown 文档。",
+          copy: "复制 Markdown",
+          copied: "已复制",
+          raw: "原始 Markdown",
+          app: "打开应用",
+          machine: "Agent 配置",
+          footer: "一个文档源，适用于不同部署版本。",
+        }
+      : {
+          onPage: "On this page",
+          loading: "Loading documentation…",
+          failed: "The guide could not be loaded. Open the Markdown document directly.",
+          copy: "Copy Markdown",
+          copied: "Copied",
+          raw: "Raw Markdown",
+          app: "Open App",
+          machine: "Agent setup",
+          footer: "One documentation source for every deployment.",
+        };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/85 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/"
-              className="flex items-center gap-2 text-foreground font-semibold tracking-tight hover:opacity-85 transition-opacity"
-            >
-              <StateDockLogo className="h-7 w-7" />
-              <span className="text-base font-bold">StateDock</span>
-            </a>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+          <a href="/" className="flex shrink-0 items-center gap-2 font-semibold">
+            <StateDockLogo className="h-7 w-7" />
+            <span>StateDock</span>
+            <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">
               /doc
             </span>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 text-xs">
+          </a>
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
             <button
-              onClick={copyFullMarkdown}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors font-medium"
-              title="Copy entire markdown document for AI Agent or clipboard"
+              onClick={copyMarkdown}
+              disabled={!markdown}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
             >
-              {copiedAll ? (
-                <Check className="h-3.5 w-3.5 text-emerald-500" />
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              <span>{copiedAll ? "Copied All" : "Copy Markdown"}</span>
+              <span className="hidden sm:inline">{copied ? text.copied : text.copy}</span>
             </button>
-
             <a
-              href="/doc.md"
+              href={markdownPath}
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/80 hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted sm:inline-flex"
             >
-              <span>Raw .md</span>
+              {text.raw}
               <ExternalLink className="h-3 w-3" />
             </a>
-
             <a
-              href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity shadow-xs"
+              href="https://app.statedock.dev"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"
             >
-              <span>Open App</span>
+              {text.app}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </div>
         </div>
       </header>
-
-      {/* Main Container */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-1 w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sticky Table of Contents Sidebar */}
-        <aside className="hidden lg:block lg:col-span-1">
-          <div className="sticky top-20 space-y-1 text-xs">
-            <p className="font-semibold text-foreground/70 uppercase tracking-wider text-[11px] mb-3 px-2">
-              On this page
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:py-12">
+        <aside className="hidden lg:block">
+          <div className="sticky top-24 space-y-2 text-sm">
+            <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {text.onPage}
             </p>
-            <nav className="space-y-0.5 border-l border-border/60 pl-3">
-              <a
-                href="#overview"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                1. Overview
-              </a>
-              <a
-                href="#quickstart"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                2. Quickstart
-              </a>
-              <a
-                href="#identities"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                Agent Identities &amp; Ready queues
-              </a>
-              <a
-                href="#collaboration"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors font-medium text-foreground"
-              >
-                3. Team & Full Access
-              </a>
-              <a
-                href="#lifecycle"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                4. Task Lifecycle
-              </a>
-              <a
-                href="#quotas"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                5. Self-hosted Capabilities
-              </a>
-              <a
-                href="#notifications"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                6. Real-time Notifications
-              </a>
-              <a
-                href="#faq"
-                className="block py-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                7. FAQ & Troubleshooting
-              </a>
+            <nav className="space-y-1 border-l border-border pl-3">
+              {headings
+                .filter((heading) => heading.level === 2)
+                .map((heading) => (
+                  <a
+                    key={heading.id}
+                    href={"#" + heading.id}
+                    className="block py-1 text-muted-foreground hover:text-primary"
+                  >
+                    {heading.title}
+                  </a>
+                ))}
             </nav>
-
-            <div className="mt-8 pt-6 border-t border-border/50 text-[11px] text-muted-foreground space-y-2">
-              <p className="font-medium text-foreground/80">Useful Links</p>
-              <a href="/agent.md" target="_blank" className="block text-primary hover:underline">
-                agent.md (Agent Setup Guide)
+            <div className="space-y-1 border-t border-border pt-4 text-xs">
+              <p className="font-semibold">{text.machine}</p>
+              <a href="/agent.md" className="block text-primary hover:underline">
+                agent.md
               </a>
-              <a href="/skill.md" target="_blank" className="block text-primary hover:underline">
-                skill.md (Authoritative Skill)
+              <a href="/setup.md" className="block text-primary hover:underline">
+                setup.md
               </a>
-              <a
-                href="/mcp"
-                target="_blank"
-                className="block text-primary hover:underline font-mono"
-              >
-                Remote MCP Endpoint
+              <a href="/skill.md" className="block text-primary hover:underline">
+                skill.md
               </a>
             </div>
           </div>
         </aside>
-
-        {/* Content Column */}
-        <main className="lg:col-span-3 space-y-12 max-w-3xl">
-          {/* Header */}
-          <div className="space-y-3 pb-6 border-b border-border/60">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-              StateDock Operations Guide
-            </h1>
-            <p className="text-base text-muted-foreground">
-              A pragmatic quick reference for human developers (solo or 1–5 member teams) and AI
-              coding agents.
-            </p>
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
-              <span className="px-2 py-0.5 rounded bg-muted font-mono text-[11px]">
-                Last Updated: October 2026
-              </span>
-              <span>•</span>
-              <span className="font-mono text-[11px]">Direct Markdown: /doc.md</span>
+        <main className="min-w-0 max-w-4xl space-y-5">
+          {loading && <p className="text-muted-foreground">{text.loading}</p>}
+          {loadError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+              <p>{text.failed}</p>
+              <a href={markdownPath} className="mt-2 inline-block text-primary underline">
+                {markdownPath}
+              </a>
             </div>
-          </div>
-
-          {/* Section 1: Overview */}
-          <section id="overview" className="space-y-4 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">01.</span> Overview
-            </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              StateDock is an append-only goal, task, and context ledger for human developers and AI
-              coding agents:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-4 rounded-xl border border-border/70 bg-card space-y-1.5">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-blue-500" /> For Humans
-                </span>
-                <p className="text-muted-foreground">
-                  Track project plans, high-level decisions, active tasks, and verified outcomes
-                  without context drift.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-border/70 bg-card space-y-1.5">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Bot className="h-4 w-4 text-indigo-500" /> For AI Agents
-                </span>
-                <p className="text-muted-foreground">
-                  Recover context across sessions via{" "}
-                  <code className="font-mono text-[11px] bg-muted px-1 py-0.5 rounded">
-                    resume_project
-                  </code>
-                  , claim tasks, log blockers, and submit handoffs.
-                </p>
-              </div>
-            </div>
-            <div className="p-3.5 rounded-xl border border-blue-500/20 bg-blue-500/5 text-xs text-foreground/90">
-              <p className="font-medium">
-                🛡️ <strong>Zero Source Code Access:</strong> StateDock never reads or stores your
-                code. Source code stays strictly in your local Git repository; StateDock only
-                records goals, tasks, handoff summaries, and documents.
-              </p>
-            </div>
-          </section>
-
-          {/* Section 2: Quickstart */}
-          <section id="quickstart" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">02.</span> Quickstart
-            </h2>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">1. Access StateDock Web App</h3>
-              <p className="text-xs text-muted-foreground">
-                Visit{" "}
-                <a href="/" className="text-primary underline">
-                  {window.location.origin}
-                </a>{" "}
-                and sign in using your email address. You will receive a passwordless 6-digit
-                verification code.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">
-                  2. Connect Local Coding Agents (Cursor, Claude Code, Windsurf, Antigravity, Cline)
-                </h3>
-                <button
-                  onClick={() => copyText(mcpConfigJson, "mcp-json")}
-                  className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border border-border hover:bg-muted text-muted-foreground"
-                >
-                  {copiedId === "mcp-json" ? (
-                    <Check className="h-3 w-3 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                  <span>{copiedId === "mcp-json" ? "Copied" : "Copy JSON"}</span>
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Generate your token in <strong>Settings → MCP Clients</strong> (token begins with{" "}
-                <code className="font-mono text-foreground">sdm_</code>), then add to your editor's
-                MCP config:
-              </p>
-              <pre className="p-3.5 rounded-xl border border-border/80 bg-muted/50 font-mono text-xs overflow-x-auto text-foreground/90">
-                {mcpConfigJson}
-              </pre>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">3. Connect OpenAI Codex</h3>
-                <button
-                  onClick={() => copyText(codexConfigToml, "codex-toml")}
-                  className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded border border-border hover:bg-muted text-muted-foreground"
-                >
-                  {copiedId === "codex-toml" ? (
-                    <Check className="h-3 w-3 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                  <span>{copiedId === "codex-toml" ? "Copied" : "Copy TOML"}</span>
-                </button>
-              </div>
-              <pre className="p-3.5 rounded-xl border border-border/80 bg-muted/50 font-mono text-xs overflow-x-auto text-foreground/90">
-                {codexConfigToml}
-              </pre>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                4. Connect ChatGPT Web (OAuth 2.1)
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Add a Custom MCP in ChatGPT with server URL:{" "}
-                <code className="font-mono text-foreground">{`${window.location.origin}/mcp`}</code>
-                . ChatGPT automatically negotiates OAuth 2.1 PKCE. Authorize your account on the web
-                prompt to allow ChatGPT to read your projects and save planned tasks.
-              </p>
-            </div>
-          </section>
-
-          <section id="identities" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Agent Identities &amp; Ready queues
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Create identities to assign tasks and group MCP connections. An identity doesn&apos;t
-              create or launch an AI agent.
-            </p>
-            <ol className="list-decimal pl-5 space-y-3 text-sm text-muted-foreground">
-              <li>
-                In MCP Connections, use <strong>Add Identity</strong>. Manage existing entries in{" "}
-                <strong>Identities</strong>. Adding an identity does not select it for a new token.
-              </li>
-              <li>
-                Choose <strong>Assign to identity</strong> before creating a token, or change an
-                existing token&apos;s <strong>Identity</strong>. Its token value stays valid; the
-                new binding applies on subsequent requests.
-              </li>
-              <li>
-                For OAuth, choose an identity during authorization. Reconnect to change it. Separate
-                authorizations keep their own identity and scopes; a host may need a fresh chat to
-                refresh its connection.
-              </li>
-              <li>
-                Select <strong>Assigned Identity</strong> in the task, save, and set it to Ready.
-                Filter the task list by identity. Return Working tasks to Ready before reassigning
-                them.
-              </li>
-              <li>
-                Ask the connected agent to execute its own Ready tasks. The default{" "}
-                <code>mode=&quot;mine&quot;</code> excludes other identities and Unassigned tasks.
-                Use <code>mode=&quot;unassigned&quot;</code> only with explicit user authorization.
-              </li>
-            </ol>
-            <div className="rounded-xl border p-4 text-sm space-y-3 text-muted-foreground">
-              <p>
-                Multiple tokens sharing an identity share its queue, with atomic claims preventing
-                duplicate work. Use Codex-Mac and Codex-Cloud for separate queues.
-              </p>
-              <p>
-                <strong>Unbound</strong> describes a connection; <strong>Unassigned</strong>{" "}
-                describes a task. Unbound remote connections cannot claim Ready queues. Ready does
-                not wake an agent.
-              </p>
-              <p>
-                Delete identities from the list. Working tasks block deletion; otherwise tokens are
-                unbound and Planned, Ready and Waiting assignments are cleared. Completed history is
-                preserved.
-              </p>
-              <p>
-                Refresh instructions from this instance&apos;s{" "}
-                <a href="/skill.md" className="text-primary underline">
-                  skill.md
-                </a>
-                , then ask the agent to call <code>get_instance_info</code> and report its{" "}
-                <code>agentId</code>. Updating a skill does not change its credential binding. The
-                standalone local SQLite adapter retains its local queue.
-              </p>
-            </div>
-            <a href="/agent.md" className="text-sm text-primary underline">
-              Agent setup and queue execution guide
-            </a>
-          </section>
-
-          {/* Section 3: Collaboration & Full Access */}
-          <section id="collaboration" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">03.</span> Team Collaboration & Full
-              Access
-            </h2>
-
-            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-2 text-xs">
-              <p className="font-bold text-foreground text-sm flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Core Collaboration Principle: Full
-                Access
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                StateDock is designed for solo hackers and 1–5 person small teams.{" "}
-                <strong>
-                  Anyone added to a project automatically receives full read and write access
-                </strong>{" "}
-                to all tasks, plans, markdown documents, activity logs, and agent connections. No
-                complex role hierarchies or read-only masks.
-              </p>
-            </div>
-
-            <div className="border border-border/70 rounded-xl overflow-hidden text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 font-semibold text-foreground">
-                    <th className="py-2.5 px-3">Capability</th>
-                    <th className="py-2.5 px-3 text-center">Project Owner (Founder)</th>
-                    <th className="py-2.5 px-3 text-center">Collaborator</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60 text-muted-foreground">
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">
-                      Read & write tasks, plans, documents
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Full Access
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Full Access
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">
-                      Connect AI agents to project via MCP
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Yes
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Yes
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">
-                      Receive real-time outbound notifications
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Yes
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Yes
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">
-                      Invite or remove collaborators
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Owner Only
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-muted-foreground/60">❌ No</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">Delete the project</td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Owner Only
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-muted-foreground/60">❌ No</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium text-foreground">
-                      Voluntarily leave the project
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-muted-foreground/60">
-                      ❌ No (Owns project)
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-emerald-500 font-semibold">
-                      ✅ Yes
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
-              <p>
-                <strong>How to Invite:</strong> In the Web App, open the project → click{" "}
-                <strong>Collaborators</strong> in the sidebar → enter the teammate's email → click{" "}
-                <strong>Invite</strong>.
-              </p>
-              <p>
-                <strong>Pre-provisioning:</strong> Even if your teammate has not signed up for
-                StateDock yet, they can be invited immediately. Once they sign in with that email
-                address, the shared project will instantly appear in their workspace.
-              </p>
-            </div>
-          </section>
-
-          {/* Section 4: Task Lifecycle */}
-          <section id="lifecycle" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">04.</span> Task & Goal Lifecycle
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Every development item in StateDock transitions through clean, deterministic states:
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3.5 rounded-xl border border-border bg-card space-y-1">
-                <span className="font-semibold text-blue-500 font-mono">WORKING</span>
-                <p className="text-muted-foreground">
-                  Direct implementation requests start here immediately. Coding agents must record a
-                  WORKING task before writing code.
-                </p>
-              </div>
-              <div className="p-3.5 rounded-xl border border-border bg-card space-y-1">
-                <span className="font-semibold text-muted-foreground font-mono">PLAN</span>
-                <p className="text-muted-foreground">
-                  Deferred proposals, backlogs, or discussion ideas. Does NOT automatically trigger
-                  agent execution.
-                </p>
-              </div>
-              <div className="p-3.5 rounded-xl border border-border bg-card space-y-1">
-                <span className="font-semibold text-amber-500 font-mono">WAITING</span>
-                <p className="text-muted-foreground">
-                  Blocked on external dependencies, human decisions, or API keys. Must always
-                  include a clear blocker reason.
-                </p>
-              </div>
-              <div className="p-3.5 rounded-xl border border-border bg-card space-y-1">
-                <span className="font-semibold text-emerald-500 font-mono">DONE</span>
-                <p className="text-muted-foreground">
-                  Task completed. Submit a structured handoff (changes, verification, next steps).
-                  Keep summaries human-readable without raw diffs.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-border/70 bg-muted/30 text-xs text-muted-foreground">
-              <strong className="text-foreground">Optimistic Concurrency Control:</strong> Whenever
-              updating a task, pass{" "}
-              <code className="font-mono bg-muted px-1 py-0.5 rounded">expectedUpdatedAt</code>. If
-              another teammate or agent modified the plan concurrently, the server returns{" "}
-              <code className="font-mono bg-muted px-1 py-0.5 rounded">409 Conflict</code> so you
-              can re-fetch and resolve safely.
-            </div>
-          </section>
-
-          {/* Section 5: Self-hosted capabilities */}
-          <section id="quotas" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              <span className="text-primary font-mono text-lg">05.</span> Self-hosted Capabilities
-            </h2>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              All product capabilities are included: projects, collaborators, notification channels,
-              API, MCP, and OAuth. There are no subscription quotas or license checks. Your
-              Cloudflare account and integration providers determine infrastructure limits and
-              costs.
-            </p>
-          </section>
-
-          {/* Section 6: Outbound Notifications */}
-          <section id="notifications" className="space-y-4 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">06.</span> Real-time Notifications
-            </h2>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Stay in sync with autonomous coding agents without staring at terminal screens.
-              StateDock dispatches event pushes whenever a task is started, paused, or completed.
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="p-3 rounded-xl border border-border bg-card">
-                <p className="font-semibold text-foreground">Telegram</p>
-                <p className="text-muted-foreground text-[11px]">Instant bot pushes</p>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-card">
-                <p className="font-semibold text-foreground">Bark (iOS)</p>
-                <p className="text-muted-foreground text-[11px]">Native iOS notifications</p>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-card">
-                <p className="font-semibold text-foreground">Discord</p>
-                <p className="text-muted-foreground text-[11px]">Team server channel alerts</p>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-card">
-                <p className="font-semibold text-foreground">Ntfy</p>
-                <p className="text-muted-foreground text-[11px]">Open-source unified push</p>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-card col-span-2 sm:col-span-1">
-                <p className="font-semibold text-foreground">Custom Webhook</p>
-                <p className="text-muted-foreground text-[11px]">HMAC-SHA256 signed JSON</p>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-border bg-muted/20 text-xs text-muted-foreground">
-              💡 <strong>Private Per-User Settings:</strong> You configure your personal
-              notification preferences in your own account. You will automatically receive alerts
-              for tasks in projects you created <em>and</em> projects you collaborate on.
-            </div>
-          </section>
-
-          {/* Section 7: FAQ & Troubleshooting */}
-          <section id="faq" className="space-y-5 scroll-mt-20">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="text-primary font-mono text-lg">07.</span> FAQ & Troubleshooting
-            </h2>
-
-            <div className="space-y-4 text-xs">
-              <div className="p-4 rounded-xl border border-border bg-card space-y-1.5">
-                <p className="font-bold text-foreground">
-                  Q: I was invited to a project, but my sidebar still says "0 PROJECTS"?
-                </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  Verify the email address shown at the bottom of your sidebar. You must be signed
-                  in to the <strong>exact email address</strong> that was invited by the project
-                  owner. If you have multiple accounts, sign out and log in with the invited email.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl border border-border bg-card space-y-1.5">
-                <p className="font-bold text-foreground">
-                  Q: Can collaborators see my other private projects?
-                </p>
-                <p className="text-muted-foreground leading-relaxed">
-                  No. StateDock isolates projects strictly. Collaborators can only see the project
-                  they were explicitly added to.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Footer Callout */}
-          <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          )}
+          {!loading && !loadError && (
+            <article className="space-y-6 break-words">{renderMarkdown(markdown)}</article>
+          )}
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <StateDockLogo className="h-4 w-4" />
-              <span>StateDock — Project states for coding agents</span>
+              <span>{text.footer}</span>
             </div>
-            <div className="flex items-center gap-4">
-              <a href="/doc.md" className="hover:text-foreground underline">
-                doc.md
-              </a>
-              <a href="/agent.md" className="hover:text-foreground underline">
-                agent.md
-              </a>
-              <a href="/skill.md" className="hover:text-foreground underline">
-                skill.md
-              </a>
-              <a href="/" className="text-primary font-medium hover:underline">
-                Launch App →
-              </a>
-            </div>
-          </div>
+            <a
+              href="https://app.statedock.dev"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              {text.app}
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          </footer>
         </main>
       </div>
     </div>

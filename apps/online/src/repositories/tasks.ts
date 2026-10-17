@@ -183,7 +183,11 @@ export class TaskRepository extends ProjectRepository {
     const at = now(),
       planId = id();
     await this.db.batch([
-      this.db.prepare("UPDATE plan_sequence SET last_number=last_number+1 WHERE id=1"),
+      // Never trust the counter alone: a row written straight into the database ahead of it would
+      // otherwise make every later create fail on the unique plans.global_number constraint.
+      this.db.prepare(
+        "UPDATE plan_sequence SET last_number=MAX(last_number,(SELECT COALESCE(MAX(global_number),0) FROM plans))+1 WHERE id=1",
+      ),
       this.db
         .prepare(
           "INSERT INTO plans(id,project_id,number,global_number,title,body,summary,status,created_at,updated_at) SELECT ?,?,COALESCE((SELECT MAX(number)+1 FROM plans WHERE project_id=?),1),last_number,?,?,?,?,?,? FROM plan_sequence WHERE id=1",
@@ -210,7 +214,7 @@ export class TaskRepository extends ProjectRepository {
           actor.type,
           actor.name ?? null,
           planId,
-          JSON.stringify({ status: input.status }),
+          JSON.stringify({ status: input.status, title: input.title, body: input.body ?? "" }),
           at,
         ),
     ]);
@@ -286,6 +290,9 @@ export class TaskRepository extends ProjectRepository {
       claimedAgentId: input.status === "READY" ? null : undefined,
       claimId: input.status === "READY" ? null : undefined,
     }).filter(([, v]) => v !== undefined);
+    const before: Record<string, unknown> = {};
+    for (const key of ["title", "body", "summary", "status", "assignedAgentId"] as const)
+      if (input[key] !== undefined && input[key] !== existing[key]) before[key] = existing[key];
     if (changes.length) {
       const columns: Record<string, string> = {
         title: "title",
@@ -321,6 +328,8 @@ export class TaskRepository extends ProjectRepository {
             existing.id,
             JSON.stringify({
               ...input,
+              // The replaced text, so an edit to the goal can be compared with what it was.
+              ...(Object.keys(before).length ? { before } : {}),
               completionTransition: input.status === "DONE" && existing.status !== "DONE",
             }),
             at,

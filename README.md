@@ -1,8 +1,10 @@
 # StateDock
 
-A shared workspace for people and coding agents to track project goals, tasks, and outcomes.
+**Shared project memory for you and your coding agents.**
 
-This repository is the Cloudflare self-hosted edition. Deploy it in your own Cloudflare account; you operate its Workers, D1, KV, R2, domain, email delivery, and backups. It is separate from StateDock Cloud and has no Cloud subscription tiers.
+Goals, decisions and handoffs live in one place. Claude Code, Cursor and Codex read context over MCP, pick up ready work and write back handoffs, so the next agent never starts from zero.
+
+This repository is the Cloudflare self-hosted edition. Deploy it in your own Cloudflare account; you operate its Workers, D1, KV, R2, domain, email delivery, and backups. It is separate from StateDock Cloud and has no Cloud subscription tiers. To run StateDock on your own computer or a Linux server with one command, use [StateDock Local](https://github.com/statedock/statedock-local) instead.
 
 - Product and shared feature guide: [statedock.dev/doc](https://statedock.dev/doc#cloudflare-self-hosted)
 - Install and deploy: [docs/self-hosting.md](docs/self-hosting.md)

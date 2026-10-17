@@ -8,3 +8,8 @@ RESEND_API_KEY=REPLACE_WITH_YOUR_TEST_EMAIL_PROVIDER_KEY
 # DISCORD_PUBLIC_KEY=REPLACE_WITH_YOUR_DISCORD_PUBLIC_KEY
 # DISCORD_APPLICATION_ID=REPLACE_WITH_YOUR_DISCORD_APPLICATION_ID
 # Sender and public origin are configured in your Wrangler config.
+
+# Optional Web Push: generate once with scripts/generate-vapid.mjs. Never commit real keys.
+# VAPID_PUBLIC_KEY=
+# VAPID_PRIVATE_KEY=
+# VAPID_SUBJECT=mailto:admin@example.com

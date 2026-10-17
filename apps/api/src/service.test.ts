@@ -81,9 +81,16 @@ describe("StateDock API", () => {
           : ((await (await app.request(`/api/projects/${slug}/plans`)).json()) as any).data.length,
       );
     }
-    const patch = await app.request("/api/projects/one/plans/1", {
+    const refused = await app.request("/api/projects/one/plans/1", {
       method: "PATCH",
       headers,
+      body: JSON.stringify({ status: "DONE" }),
+    });
+    assert.equal(refused.status, 403);
+    assert.equal(((await refused.json()) as any).error, "forbidden");
+    const patch = await app.request("/api/projects/one/plans/1", {
+      method: "PATCH",
+      headers: { ...headers, "x-actor-type": "human" },
       body: JSON.stringify({ status: "DONE" }),
     });
     assert.equal(((await patch.json()) as any).data.status, "DONE");
@@ -118,7 +125,7 @@ describe("StateDock API", () => {
   });
   it("keeps activity append-only after project deletion and reruns migration safely", async () => {
     await migrate(client);
-    assert.equal((await client.execute("SELECT * FROM schema_migrations")).rows.length, 9);
+    assert.equal((await client.execute("SELECT * FROM schema_migrations")).rows.length, 10);
     const p = await app.request("/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },

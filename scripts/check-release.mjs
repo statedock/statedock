@@ -32,6 +32,17 @@ const exampleDomain = /(?:^|\.)(?:example\.(?:com|net|org|test)|test|invalid)$/i
 // Reviewed upstream reference only; runtime endpoints and other files remain blocked.
 const reviewedReferenceUrls = new Map([
   ["skills/statedock/SKILL.md", new Set(["https://statedock.dev/skill.md"])],
+  [
+    "docs/spec/task-bundle.v1.schema.json",
+    new Set([
+      "https://statedock.dev/spec/task-bundle.v1.schema.json",
+      "https://statedock.dev/spec/task-record.v1.schema.json",
+    ]),
+  ],
+  [
+    "docs/spec/task-record.v1.schema.json",
+    new Set(["https://statedock.dev/spec/task-record.v1.schema.json"]),
+  ],
 ]);
 
 export async function checkRelease(root) {

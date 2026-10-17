@@ -33,10 +33,17 @@ export const codeReferenceSchema = z.object({
 });
 export type CodeReference = z.infer<typeof codeReferenceSchema>;
 
+export const deliverableSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  location: z.string().trim().min(1).max(2000),
+});
+export type Deliverable = z.infer<typeof deliverableSchema>;
+
 export const handoffSchema = z.object({
   changes: z.string().min(1),
   verification: z.string().optional(),
   nextSteps: z.string().optional(),
+  deliverables: z.array(deliverableSchema).max(20).optional(),
   codeReference: codeReferenceSchema.nullable().optional(),
 });
 export type HandoffInput = z.infer<typeof handoffSchema>;
@@ -144,6 +151,44 @@ export interface MarkdownFile {
   content: string;
   updatedAt: string;
 }
+export const projectKnowledgeTemplates = [
+  {
+    path: "PROJECT.md",
+    content: `# Project Information
+
+## Overview
+Describe what this project is and the problem it solves.
+
+## Positioning and Principles
+- Purpose:
+- Core principles:
+
+## Important Links
+- Website:
+- Repository:
+- Documentation:
+
+## Platforms and Releases
+List publishing platforms and current release information.
+
+## Long-term Guidance
+Record durable working principles and constraints for people and agents.
+
+## Current Focus
+What the project is concentrating on for now. Update it only when the direction changes.
+`,
+  },
+  {
+    path: "TIMELINE.md",
+    content: `# Project Timeline
+
+A curated record of important milestones, releases, decisions, campaigns, and major changes. Update this file during an intentional review; do not add an entry for every task. Preserve existing history. Include a verified date and source task reference for each entry when available.
+
+## Entries
+`,
+  },
+] as const;
+
 export interface Activity {
   id: string;
   projectId: string;
@@ -157,6 +202,7 @@ export interface Activity {
 
 export class NotFoundError extends Error {}
 export class ConflictError extends Error {}
+export class ForbiddenError extends Error {}
 
 export { StateDockService, type Repository } from "./service.js";
 
@@ -266,3 +312,21 @@ export {
   type QueuePrincipal,
   type ReadyQueueMode,
 } from "./agent-queue.js";
+
+export {
+  findHygieneIssues,
+  type HygieneIssue,
+  type HygieneKind,
+  type HygieneOptions,
+  type HygieneReport,
+} from "./hygiene.js";
+
+export {
+  TASK_RECORD_SPEC_VERSION,
+  parseDeliverables,
+  toTaskBundle,
+  toTaskRecord,
+  type TaskBundle,
+  type TaskDeliverable,
+  type TaskRecord,
+} from "./task-record.js";
