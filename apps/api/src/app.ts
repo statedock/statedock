@@ -4,6 +4,7 @@ import {
   createPlanSchema,
   createProjectSchema,
   fileSchema,
+  ForbiddenError,
   handoffSchema,
   NotFoundError,
   planCreationMessage,
@@ -38,6 +39,8 @@ export function createApp(service: StateDockService) {
       return c.json({ error: "not_found", message: error.message }, 404);
     if (error instanceof ConflictError)
       return c.json({ error: "conflict", message: error.message }, 409);
+    if (error instanceof ForbiddenError)
+      return c.json({ error: "forbidden", message: error.message }, 403);
     console.error(error);
     return c.json({ error: "internal_error" }, 500);
   });

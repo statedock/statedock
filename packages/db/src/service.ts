@@ -3,6 +3,7 @@ import {
   attachmentSchema,
   ConflictError,
   formatPlanReference,
+  projectKnowledgeTemplates,
   NotFoundError,
   type Activity,
   type Actor,
@@ -218,6 +219,14 @@ export class SqliteRepository {
         throw new ConflictError("Project slug already exists");
       throw e;
     }
+    await this.db.insert(markdownFiles).values(
+      projectKnowledgeTemplates.map(({ path, content }) => ({
+        projectId,
+        path,
+        content,
+        updatedAt: at,
+      })),
+    );
     await this.record(projectId, actor, "project.created", "project", projectId);
     return await this.getProject(projectId);
   }
@@ -309,7 +318,12 @@ export class SqliteRepository {
       });
       return Number(counter?.next ?? 1);
     })();
-    await this.record(projectId, actor, "plan.created", "plan", planId, { number: result });
+    await this.record(projectId, actor, "plan.created", "plan", planId, {
+      number: result,
+      title: input.title,
+      body: input.body,
+      status: input.status,
+    });
     return this.getPlan(projectId, result);
   }
   async updatePlan(
@@ -339,7 +353,14 @@ export class SqliteRepository {
       .where(and(eq(plans.id, existing.id), eq(plans.updatedAt, existing.updatedAt)))
       .returning({ id: plans.id });
     if (!updated.length) throw new ConflictError("Task changed; read it again before saving");
-    await this.record(projectId, actor, "plan.updated", "plan", existing.id, input);
+    // Keep the replaced text so an edit to the goal can always be compared with what it was.
+    const before: Record<string, unknown> = {};
+    for (const key of ["title", "body", "summary", "status"] as const)
+      if (changes[key] !== undefined && changes[key] !== existing[key]) before[key] = existing[key];
+    await this.record(projectId, actor, "plan.updated", "plan", existing.id, {
+      ...input,
+      ...(Object.keys(before).length ? { before } : {}),
+    });
     return this.getPlan(projectId, number);
   }
   async movePlan(plan: Plan, targetProjectKey: string, actor: Actor): Promise<Plan> {

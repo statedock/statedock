@@ -1,0 +1,278 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://statedock.dev/spec/task-record.v1.schema.json",
+  "title": "Task Record",
+  "description": "A tool-neutral record of one task: goal, decisions, status, outcome, and review history. Readers must ignore fields they do not recognize.",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "reference",
+    "title",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+$",
+      "description": "Spec version. 1.x readers accept any 1.y record."
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Stable identifier of the task within its system, for example SD-000299."
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number within the project, if the system has one."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "body": {
+      "type": "string",
+      "description": "Goal, decisions and acceptance criteria, in the language of the people involved."
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Outcome. SHOULD read as Changes, Verification, and Notes (or equivalent) once the task is DONE."
+    },
+    "status": {
+      "$ref": "#/definitions/status"
+    },
+    "assignedTo": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/actor"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Who or what the task is currently assigned to. A replaceable attribute; the task does not depend on it."
+    },
+    "completedBy": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/actor"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "completedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "codeReference": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/codeReference"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/review"
+      }
+    },
+    "feedback": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/feedback"
+      }
+    },
+    "deliverables": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Where the results live when they are not code: files, links, documents. Optional.",
+      "items": {
+        "type": "object",
+        "required": [
+          "location"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "PLAN",
+        "READY",
+        "WORKING",
+        "WAITING",
+        "DONE",
+        "DROPPED"
+      ]
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "system"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "codeReference": {
+      "type": "object",
+      "required": [
+        "commit",
+        "workingTree"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "workingTree": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "dirty"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://[^/@]+(/.*)?$",
+          "maxLength": 2048
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": [
+        "scope",
+        "verdict",
+        "summary",
+        "createdAt"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "changes_requested",
+            "inconclusive"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limitations": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "actor": {
+          "$ref": "#/definitions/actor"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "required": [
+        "body",
+        "createdAt"
+      ],
+      "properties": {
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "$ref": "#/definitions/actor"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

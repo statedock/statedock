@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://statedock.dev/spec/task-bundle.v1.schema.json",
+  "title": "Task Bundle",
+  "description": "A portable export of many task records, for moving work between tools.",
+  "type": "object",
+  "required": ["specVersion", "exportedAt", "tasks"],
+  "properties": {
+    "specVersion": { "type": "string", "pattern": "^1\\.[0-9]+$" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "source": { "type": "object", "properties": { "name": { "type": "string" }, "origin": { "type": "string" } } },
+    "tasks": { "type": "array", "items": { "$ref": "https://statedock.dev/spec/task-record.v1.schema.json" } }
+  }
+}

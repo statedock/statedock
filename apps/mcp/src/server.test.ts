@@ -42,9 +42,32 @@ test("stdio MCP tools share API state, record actor notes, and report errors", a
   const client = new Client({ name: "integration-test", version: "1.0.0" });
   try {
     await client.connect(transport);
+    const instructions = client.getInstructions() ?? "";
+    for (const rule of [
+      "resume_project",
+      "create_plan",
+      "pause_task",
+      "submit_handoff",
+      "Rules version",
+    ])
+      assert.ok(instructions.includes(rule), `instructions mention ${rule}`);
     const tools = await client.listTools();
     for (const name of ["list_projects", "list_attachments", "read_attachment"])
       assert.ok(tools.tools.some((t) => t.name === name));
+    assert.deepEqual(tools.tools.find((t) => t.name === "read_attachment")?.annotations, {
+      title: "Read attachment",
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    });
+    assert.deepEqual(tools.tools.find((t) => t.name === "write_file")?.annotations, {
+      title: "Write file",
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    });
+    for (const name of ["update_project", "update_plan"])
+      assert.equal(tools.tools.find((t) => t.name === name)?.annotations?.destructiveHint, true);
     const call = async (name: string, args: Record<string, unknown>) => {
       const result = await client.callTool({ name, arguments: args });
       assert.notEqual(result.isError, true, JSON.stringify(result));
@@ -56,7 +79,43 @@ test("stdio MCP tools share API state, record actor notes, and report errors", a
     await call("write_file", { project: "demo", path: "docs/result.md", content: "# Completed" });
     assert.equal((await service.getFile(project.id, "docs/result.md")).content, "# Completed");
     await call("add_note", { project: "demo", number: 1, note: "Implemented and checked." });
-    await call("update_plan", { project: "demo", number: 1, status: "DONE" });
+    // An agent cannot rewrite the task it works on, or close it outside submit_handoff.
+    for (const change of [
+      { title: "Renamed" },
+      { body: "New goal" },
+      { summary: "Done" },
+      { status: "DONE" },
+      { status: "READY" },
+    ]) {
+      const refusedEdit = await client.callTool({
+        name: "update_plan",
+        arguments: { project: "demo", number: 1, ...change },
+      });
+      assert.equal(refusedEdit.isError, true, JSON.stringify(change));
+      assert.match(JSON.stringify(refusedEdit.content), /forbidden/);
+    }
+    const untouched = await service.getPlan(project.id, 1);
+    assert.equal(untouched.title, "Implement");
+    assert.equal(untouched.status, "WORKING");
+    await call("update_plan", { project: "demo", number: 1, status: "WORKING" });
+    // A person can edit it, and the replaced text stays in the activity log.
+    await service.updatePlan(
+      project.id,
+      1,
+      { title: "Implement it" },
+      { id: "human", type: "human" },
+    );
+    const edit = (await service.listActivity(project.id)).find(
+      (a) => a.action === "plan.updated" && (a.details as any)?.before?.title,
+    );
+    assert.equal((edit?.details as any).before.title, "Implement");
+    await service.updatePlan(project.id, 1, { title: "Implement" }, { id: "human", type: "human" });
+    await call("submit_handoff", {
+      project: "demo",
+      number: 1,
+      changes: "Implemented it",
+      verification: "Integration test",
+    });
     assert.equal((await service.getPlan(project.id, 1)).status, "DONE");
     assert.deepEqual(
       (await service.listPlanEvents(0)).events.map((event) => event.kind),
@@ -107,7 +166,12 @@ test("stdio MCP tools share API state, record actor notes, and report errors", a
       ((await call("claim_next_task", { project: "demo" })).structuredContent as any).data.claimed,
       false,
     );
-    await call("update_plan", { reference: data.reference, status: "READY" });
+    await service.updatePlan(
+      project.id,
+      data.number,
+      { status: "READY" },
+      { id: "human", type: "human" },
+    );
     const readyCtx = (await call("resume_project", { project: "demo" })).structuredContent as any;
     assert.equal(readyCtx.data.nextPendingTasks.length, 1);
     assert.equal(readyCtx.data.nextPendingTasks[0].reference, data.reference);

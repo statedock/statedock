@@ -146,7 +146,7 @@ test("repository claims record the actor, history and notifications; handoff is 
       /Ready/,
     );
     await assert.rejects(
-      service.updatePlan(project.id, plans[0].number, { status: "DONE" }, deepseek),
+      service.updatePlan(project.id, plans[0].number, { status: "WORKING" }, deepseek),
       /another Agent/,
     );
     const returned = await service.updatePlan(

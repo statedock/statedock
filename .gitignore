@@ -23,3 +23,8 @@ worker-configuration.d.ts
 
 # Persistent per-instance Web Push keys
 **/.vapid*.json
+
+# Staged from docs/ by apps/web/scripts/stage-docs.mjs at build time
+apps/web/public/doc.md
+apps/web/public/doc.zh.md
+apps/web/public/spec/

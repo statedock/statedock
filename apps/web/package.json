@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build && node scripts/generate-sw.mjs",
+    "dev": "node scripts/stage-docs.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/stage-docs.mjs && tsc --noEmit && vite build && node scripts/generate-sw.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
