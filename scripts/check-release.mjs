@@ -29,7 +29,7 @@ const secretPatterns = [
   /\bgh[pousr]_[A-Za-z0-9]{30,}\b/,
 ];
 const exampleDomain = /(?:^|\.)(?:example\.(?:com|net|org|test)|test|invalid)$/i;
-// Reviewed upstream reference only; runtime endpoints and other files remain blocked.
+// Reviewed links to the official site, listed per file and exactly; runtime endpoints and other files remain blocked.
 const reviewedReferenceUrls = new Map([
   ["skills/statedock/SKILL.md", new Set(["https://statedock.dev/skill.md"])],
   [
@@ -42,6 +42,31 @@ const reviewedReferenceUrls = new Map([
   [
     "docs/spec/task-record.v1.schema.json",
     new Set(["https://statedock.dev/spec/task-record.v1.schema.json"]),
+  ],
+  [
+    "README.md",
+    new Set(["https://statedock.dev/doc#cloudflare-self-hosted", "https://statedock.dev/mcp"]),
+  ],
+  ["apps/web/src/DocPage.tsx", new Set(["https://app.statedock.dev"])],
+  [
+    "docs/doc.md",
+    new Set([
+      "https://app.statedock.dev",
+      "https://statedock.dev/#pricing",
+      "https://statedock.dev/doc",
+      "https://statedock.dev/doc.md",
+      "https://statedock.dev/mcp",
+    ]),
+  ],
+  [
+    "docs/doc.zh.md",
+    new Set([
+      "https://app.statedock.dev",
+      "https://statedock.dev/#pricing",
+      "https://statedock.dev/doc",
+      "https://statedock.dev/doc.md",
+      "https://statedock.dev/mcp",
+    ]),
   ],
 ]);
 
